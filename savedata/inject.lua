@@ -11,8 +11,8 @@ libc_base = nil
 libkernel_base = nil
 
 games_identification = {
-    ["bb0"] = "RaspberryCube",
-    ["b90"] = "Aibeya",
+    [0xbb0] = "RaspberryCube",
+    [0xb90] = "Aibeya",
 }
 
 gadget_table = {
@@ -307,6 +307,8 @@ function bit32.band(...)
         -- Common usecases, they deserve to be optimized
         if y == 0xff then
             result = x % 0x100
+        elseif y == 0xfff then
+            result = x % 0x1000
         elseif y == 0xffff then
             result = x % 0x10000
         elseif y == 0xffffffff then
@@ -771,10 +773,10 @@ end
 
 function lua.resolve_game(luaB_auxwrap)
     print("[+] luaB_auxwrap @ " .. hex(luaB_auxwrap))
-    local hex_nibbles = hex(luaB_auxwrap):sub(-3)
-    print("[+] luaB_auxwrap nibbles: " .. hex_nibbles)
+    local nibbles = luaB_auxwrap:band(uint64(0xfff)):tonumber()
+    print("[+] luaB_auxwrap nibbles: " .. hex(nibbles))
     
-    if not games_identification[hex_nibbles] then
+    if not games_identification[nibbles] then
         print("[-] Game not identified. Falling back to Raspberry Cube")
         eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
@@ -782,12 +784,12 @@ function lua.resolve_game(luaB_auxwrap)
         return
     end
     
-    if games_identification[hex_nibbles] == "RaspberryCube" then
+    if games_identification[nibbles] == "RaspberryCube" then
         print("[+] Game identified as Raspberry Cube")
         eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
         gadgets = gadget_table.raspberry_cube.gadgets
-    elseif games_identification[hex_nibbles] == "Aibeya" then
+    elseif games_identification[nibbles] == "Aibeya" then
         print("[+] Game identified as Aibeya")
         eboot_addrofs = gadget_table.aibeya.eboot_addrofs
         libc_addrofs = gadget_table.aibeya.libc_addrofs
