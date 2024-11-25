@@ -15,14 +15,14 @@ Remote lua loader for PS4 and PS5, based on gezine's [finding](https://github.co
 
 If you have a jailbroken PS5 with a non activated account, you can use OffAct from https://github.com/ps5-payload-dev/websrv/releases to offline activate the account and transfer save data with matching account ID using FTP.
 
-### Usage on PS5/PS5 Pro
+### Usage on PS5/PS5 Slim/PS5 Pro
 
 #### Requirements:
-1. PSN-activated PS5/PS5. Can be non-recent offline firmware if was activated in the past.
-2. A Jailbroken PS4 on a firmware version that is earlier or equivilant to the PS5/PS5 Pro. Refer to this [table](https://www.psdevwiki.com/ps5/Build_Strings). For example, PS4 9.00 can be used to create save game for PS5 >=4.00 but not below that.
+1. PSN-activated PS5/PS5 Slim/PS5 Pro. Can be non-recent offline firmware if was activated in the past.
+2. A Jailbroken PS4 on a firmware version that is earlier or equivilant to the PS5/PS5 Slim/PS5 Pro. Refer to this [table](https://www.psdevwiki.com/ps5/Build_Strings). For example, PS4 9.00 can be used to create save game for PS5 >=4.00 but not below that.
 
 #### Steps:
-1. Find your logged-in PSN account id on the PS5/PS5 Pro. Either by going to the PlayStation settings or by using [this website](https://psn.flipscreen.games/).
+1. Find your logged-in PSN account id on the PS5/PS5 Slim/PS5 Pro. Either by going to the PlayStation settings or by using [this website](https://psn.flipscreen.games/).
 2. Take your account ID number (~19 characters long, for PSPlay) and convert it to hex using [this website](https://www.rapidtables.com/convert/number/decimal-to-hex.html).
 
 #### JB PS4 -
@@ -37,9 +37,9 @@ If you have a jailbroken PS5 with a non activated account, you can use OffAct fr
 11. Import savedata from USB drive using Apollo Save Tool. (`USB Saves -> Select the game -> Copy save game -> Copy to HDD`)
 12. Use the PS4 settings menu to export the encrypted save data to the USB drive. (`Settings -> Application Saved Data Management -> Saved Data in System Storage -> Copy to USB Storage Device`)
 
-#### PSN-Activated PS5/PS5 Pro -
+#### PSN-Activated PS5/PS5 Slim/PS5 Pro -
 13. Make sure you're logged-in to the PSN-activated user.
-14. Connect your USB drive to the PS5/PS5 Pro.
+14. Connect your USB drive to the PS5/PS5 Slim/PS5 Pro.
 15. Use the PS5 settings menu to import the encrypted save data from the USB drive. (`Saved Data and Game/App Settings -> Saved Data (PS4) -> Copy or Delete from USB Drive -> Select your game and import`)
 16. Run the game and check if there is a popup from lua loader.
 17. Use `send_lua.py` to send lua file to the loader.
