@@ -1,13 +1,17 @@
 
 ## Remote Lua Loader
 
-Remote lua loader for PS4 and PS5, based on gezine's [finding](https://github.com/Gezine/ArtemisLuaLoader/) that allows games built with Artemis engine to load arbitrary lua file. Currently this loader is specific for Raspberry Cube (CUSA16074) and Aibeya (CUSA17068). The loader is not firmware dependant, and has been successfully tested on PS5 Pro 10.20.
+Remote lua loader for PS4 and PS5, based on gezine's [finding](https://github.com/Gezine/ArtemisLuaLoader/) that allows games built with Artemis engine to load arbitrary lua file. The loader is not firmware dependant, and has been successfully tested on PS5 Pro 10.20.  
+Currently this loader is specific for the following list of games:
+1. Raspberry Cube (CUSA16074)
+2. Aibeya (CUSA17068)
+3. Hashimady Creative (CUSA27389)
 
 ### Usage on jailbroken PS4 with disc version
 
 1. Play the game for a while until you can create save data
 2. Use Apollo Save Tool to export decrypted save data to USB drive
-3. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_CUSA16074_savedata), overwriting currently existing save data
+3. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_{YOUR_GAME_CUSA_ID}_savedata), overwriting currently existing save data
 4. Make sure that `PLATFORM` variable on top of inject.lua is set appropriately
 5. Use Apollo Save Tool to import the new save data from USB drive
 6. Run the game and check if there is a popup from lua loader
@@ -30,7 +34,7 @@ If you have a jailbroken PS5 with a non activated account, you can use OffAct fr
 4. Connect a USB disk to the PS4.
 5. Use Apollo Save Tool to export decrypted save data to USB drive.
 6. Make sure that PLATFORM variable on top of inject.lua is set appropriately
-7. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_CUSA16074_savedata), overwriting currently existing save data.
+7. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_{YOUR_GAME_CUSA_ID}_savedata), overwriting currently existing save data.
 8. Create new fake offline account.
 9. Use Apollo Save Tool to activate the new fake account using the converted hex account ID from step 2.
 10. Switch to the activated fake account.
