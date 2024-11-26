@@ -5,7 +5,7 @@ Remote lua loader for PS4 and PS5, based on gezine's [finding](https://github.co
 Currently this loader is specific for the following list of games:
 1. Raspberry Cube (CUSA16074)
 2. Aibeya (CUSA17068)
-3. Hashimady Creative (CUSA27389)
+3. Hamidashi Creative (CUSA27389)
 
 ### Usage on jailbroken PS4 with disc version
 
