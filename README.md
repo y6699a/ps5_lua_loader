@@ -6,6 +6,7 @@ Currently this loader is specific for the following list of games:
 1. Raspberry Cube (CUSA16074)
 2. Aibeya (CUSA17068)
 3. Hamidashi Creative (CUSA27389)
+4. Hamidashi Creative Demo (CUSA27390) - Requires latest firmware to download from PSN
 
 ### Usage on jailbroken PS4 with disc version
 
