@@ -15,6 +15,9 @@ games_identification = {
     [0xb90] = "Aibeya",
     [0x420] = "HamidashiCreative",
     [0x5d0] = "A",
+    [0x280] = "C",
+    [0x600] = "E",
+    [0xd80] = "F",
 }
 
 gadget_table = {
@@ -93,8 +96,8 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a82cb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x44ef72,
-            ["cmp [rax], eax; ret"] = nil,
+            ["cmp [rcx], eax; ret"] = 0x303609,
+            ["cmp [rax], eax; ret"] = 0x44ef72,
             ["sete al; ret"] = 0x55747,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16dbce,
@@ -214,12 +217,165 @@ gadget_table = {
             longjmp_import = 0x619388, -- to resolve libc base
         },
         libc_addrofs = {
-            memcpy = 0x4E9d0,
+            memcpy = 0x4e9d0,
             longjmp = 0xb68b0,
             strerror = 0x42e40,
             error = 0x178,
             sceKernelGetModuleInfoFromAddr = 0x1a8,
             gettimeofday_import = 0x11c010, -- syscall wrapper
+        }
+    },
+    c = {
+        gadgets = {    
+            ["ret"] = 0x4c,
+            ["jmp $"] = nil,
+
+            ["pop rsp; ret"] = 0x972,
+            ["pop rbp; ret"] = 0x79,
+            ["pop rax; ret"] = 0x962,
+            ["pop rbx; ret"] = 0x3f311,
+            ["pop rcx; ret"] = 0xc35,
+            ["pop rdx; ret"] = 0x3066e2,
+            ["pop rdi; ret"] = 0x107550,
+            ["pop rsi; ret"] = 0xfcd16,
+            ["pop r8; ret"] = 0x961,
+            ["mov r9, rbx; call [rax + 8]"] = 0x145f20,
+
+            ["mov [rdi], rsi; ret"] = 0xcbe0f,
+            ["mov [rdi], rax; ret"] = 0xa16b,
+            ["mov [rdi], eax; ret"] = 0xa16c,
+            ["add [rbx], eax; ret"] = 0x405d0b,
+            ["add [rbx], ecx; ret"] = nil,
+            ["add [rbx], edi; ret"] = 0x3e2e53,
+            ["mov rax, [rax]; ret"] = 0x1e55b,
+            ["inc dword [rax]; ret"] = 0x18ecbb,
+
+            -- branching specific gadgets
+            ["cmp [rcx], eax; ret"] = 0x2d2d79,
+            ["cmp [rax], ebx; ret"] = nil,
+            ["sete al; ret"] = 0x55bc5,
+            ["setne al; ret"] = 0x1c58e,
+            ["seta al; ret"] = 0x16187e,
+            ["setb al; ret"] = 0x55be4,
+            ["setg al; ret"] = nil,
+            ["setl al; ret"] = 0xc600a,
+            ["shl rax, cl; ret"] = 0xd0623,
+            ["add rax, rcx; ret"] = 0x102341,
+        },
+        eboot_addrofs = {
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x195280, -- to resolve eboot base
+            longjmp_import = 0x4caf88, -- to resolve libc base
+        },
+        libc_addrofs = {
+            memcpy = 0x54a60,
+            longjmp = 0x71b20,
+            strerror = 0x49020,
+            error = 0x148,
+            sceKernelGetModuleInfoFromAddr = 0x548,
+            gettimeofday_import = 0xdbd60, -- syscall wrapper
+        }
+    },
+    e = {
+        gadgets = {    
+            ["ret"] = 0x4c,
+            ["jmp $"] = nil,
+            
+            ["pop rsp; ret"] = 0x932,
+            ["pop rbp; ret"] = 0x79,
+            ["pop rax; ret"] = 0x922,
+            ["pop rbx; ret"] = 0xd16f5,
+            ["pop rcx; ret"] = 0xc15,
+            ["pop rdx; ret"] = 0x194902,
+            ["pop rdi; ret"] = 0xd74c2,
+            ["pop rsi; ret"] = 0xe4b04,
+            ["pop r8; ret"] = 0x921,
+            ["mov r9, rbx; call [rax + 8]"] = 0x14f760,
+
+            ["mov [rdi], rsi; ret"] = 0xd592f,
+            ["mov [rdi], rax; ret"] = 0xa42b,
+            ["mov [rdi], eax; ret"] = 0xa42c,
+            ["add [rbx], eax; ret"] = 0x42a0db,
+            ["add [rbx], ecx; ret"] = nil,
+            ["add [rbx], edi; ret"] = 0x408943,
+            ["mov rax, [rax]; ret"] = 0x201cb,
+            ["inc dword [rax]; ret"] = 0x198dbb,
+
+            -- branching specific gadgets
+            ["cmp [rcx], eax; ret"] = 0x2f93a9,
+            ["cmp [rax], eax; ret"] = nil,
+            ["sete al; ret"] = 0x5e635,
+            ["setne al; ret"] = 0x1e39e,
+            ["seta al; ret"] = 0x16af0e,
+            ["setb al; ret"] = 0x5e654,
+            ["setg al; ret"] = nil,
+            ["setl al; ret"] = 0xcfc4a,
+            ["shl rax, cl; ret"] = 0xda391,
+            ["add rax, rcx; ret"] = 0x355ce,
+        },
+        eboot_addrofs = {
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x19f600, -- to resolve eboot base
+            longjmp_import = 0x4f3ac0, -- to resolve libc base
+        },
+        libc_addrofs = {
+            memcpy = 0x18590,
+            longjmp = 0x7f6b0,
+            strerror = 0xcda0,
+            error = 0x138,
+            sceKernelGetModuleInfoFromAddr = 0x568,
+            gettimeofday_import = 0xefd10, -- syscall wrapper
+        }
+    },
+    f = {
+        gadgets = {    
+            ["ret"] = 0x4c,
+            ["jmp $"] = nil,
+            
+            ["pop rsp; ret"] = 0xa02,
+            ["pop rbp; ret"] = 0x79,
+            ["pop rax; ret"] = 0x9f2,
+            ["pop rbx; ret"] = 0x608b6,
+            ["pop rcx; ret"] = 0x14a7f,
+            ["pop rdx; ret"] = 0x3f3ce7,
+            ["pop rdi; ret"] = 0x899fb,
+            ["pop rsi; ret"] = 0x10f122,
+            ["pop r8; ret"] = 0x9f1,
+            ["mov r9, rbx; call [rax + 8]"] = 0x1513ef,
+
+            ["mov [rdi], rsi; ret"] = 0xd78ef,
+            ["mov [rdi], rax; ret"] = 0x996bb,
+            ["mov [rdi], eax; ret"] = 0x996bc,
+            ["add [rbx], eax; ret"] = nil,
+            ["add [rbx], ecx; ret"] = 0x44107f,
+            ["add [rbx], edi; ret"] = 0x40cde3,
+            ["mov rax, [rax]; ret"] = 0x2008b,
+            ["inc dword [rax]; ret"] = 0x1a84bb,
+
+            -- branching specific gadgets
+            ["cmp [rcx], eax; ret"] = 0x303ca9,
+            ["cmp [rax], eax; ret"] = 0x44f6fe,
+            ["sete al; ret"] = 0x55787,
+            ["setne al; ret"] = 0x50f,
+            ["seta al; ret"] = 0x16ddbe,
+            ["setb al; ret"] = 0x60934,
+            ["setg al; ret"] = nil,
+            ["setl al; ret"] = 0xd1c5a,
+            ["shl rax, cl; ret"] = 0xdc121,
+            ["add rax, rcx; ret"] = 0x35afe,
+        },
+        eboot_addrofs = {
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1aed80, -- to resolve eboot base
+            longjmp_import = 0x6193e8, -- to resolve libc base
+        },
+        libc_addrofs = {
+            memcpy = 0x4df0,
+            longjmp = 0xb5680,
+            strerror = 0x42540,
+            error = 0x168,
+            sceKernelGetModuleInfoFromAddr = 0x198,
+            gettimeofday_import = 0x204060, -- syscall wrapper
         }
     },
 }
@@ -898,7 +1054,7 @@ function lua.resolve_game(luaB_auxwrap)
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
         gadgets = gadget_table.raspberry_cube.gadgets
     elseif games_identification[nibbles] == "Aibeya" then
-        print("[+] Game identified as Aibeya/B")
+        print("[+] Game identified as Aibeya/B/G")
         eboot_addrofs = gadget_table.aibeya.eboot_addrofs
         libc_addrofs = gadget_table.aibeya.libc_addrofs
         gadgets = gadget_table.aibeya.gadgets
@@ -912,6 +1068,21 @@ function lua.resolve_game(luaB_auxwrap)
         eboot_addrofs = gadget_table.a.eboot_addrofs
         libc_addrofs = gadget_table.a.libc_addrofs
         gadgets = gadget_table.a.gadgets
+    elseif games_identification[nibbles] == "C" then -- TODO: Test
+        print("[+] Game identified as C/D")
+        eboot_addrofs = gadget_table.c.eboot_addrofs
+        libc_addrofs = gadget_table.c.libc_addrofs
+        gadgets = gadget_table.c.gadgets
+    elseif games_identification[nibbles] == "E" then -- TODO: Test
+        print("[+] Game identified as E")
+        eboot_addrofs = gadget_table.e.eboot_addrofs
+        libc_addrofs = gadget_table.e.libc_addrofs
+        gadgets = gadget_table.e.gadgets
+    elseif games_identification[nibbles] == "F" then -- TODO: Test
+        print("[+] Game identified as F")
+        eboot_addrofs = gadget_table.f.eboot_addrofs
+        libc_addrofs = gadget_table.f.libc_addrofs
+        gadgets = gadget_table.f.gadgets
     end
 end
 
