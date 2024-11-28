@@ -1981,6 +1981,9 @@ function remote_lua_loader(port)
 
     local maxsize = 500 * 1024  -- 500kb
     local buf = bump.alloc(maxsize)
+    
+    sleep(5)
+    memory.write_qword(0x41414141, 0x4242)
 
     local sock_fd = syscall.socket(AF_INET, SOCK_STREAM, 0):tonumber()
     if sock_fd < 0 then
@@ -2109,6 +2112,31 @@ function get_version()
     return version
 end
 
+function sigaction(signum, action, old_action)
+    if syscall.sigaction(signum, action, old_action):tonumber() < 0 then
+        errorf("failed to set signal handler")
+    end
+
+    return true
+end
+
+function handle(signum)
+    print("!!!!!!!!!!!!handling!!!\n")
+end
+
+function signal_handler()
+    local SIGSEGV = 11
+    print("Setting signal handler\n")
+    print("Handler function address:\n")
+    print(lua.addrof_trivial(handle))
+    
+    local sigaction_struct = bump.alloc(0xa0)
+    memory.write_qword(sigaction_struct, lua.addrof_trivial(handle))
+    -- memory.write_qword(sigaction_struct, 0x0000414300004445)
+    
+    sigaction(SIGSEGV, sigaction_struct, 0)
+end
+
 function main()
 
     -- setup read & limited write primitives
@@ -2138,6 +2166,7 @@ function main()
         setsockopt = 105,
         listen = 106,
         sysctl = 202,
+        sigaction = 416,
     })
 
     -- sanity check
@@ -2149,6 +2178,7 @@ function main()
     print("[+] syscall resolved")
 
     FW_VERSION = get_version()
+    signal_handler()
 
     -- stable but exhaust memory
     run_nogc(function()
