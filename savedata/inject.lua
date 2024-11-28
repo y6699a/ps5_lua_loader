@@ -1,5 +1,4 @@
 
-PLATFORM = "ps4"  -- ps4 or ps5
 LOG_TO_KLOG = true
 FW_VERSION = nil
 
@@ -1887,34 +1886,13 @@ end
 syscall = {}
 
 function syscall.init()
-    if PLATFORM == "ps4" then  -- ps4 requires valid syscall wrapper, which we can scrape from libkernel .text
-        local libkernel_text = memory.read_buffer(libkernel_base, 0x40000)
-        -- mov rax, <num>; mov r10, rcx; syscall
-        local matches = find_pattern(libkernel_text, "48 c7 c0 ? ? ? ? 49 89 ca 0f 05")
-        syscall.syscall_wrapper = {}
-        for i,offset in ipairs(matches) do
-            local num = uint64.unpack(libkernel_text:sub(offset+3, offset+6))
-            syscall.syscall_wrapper[num:tonumber()] = libkernel_base + offset - 1
-        end
-    elseif PLATFORM == "ps5" then -- can be any syscall wrapper in libkernel
-        local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
-        syscall_rop.syscall_address = gettimeofday + 7  -- +7 is to skip "mov rax, <num>" instruction
-    else
-        errorf("invalid platform %s", PLATFORM)
-    end
+    local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
+    syscall_rop.syscall_address = gettimeofday + 7  -- +7 is to skip "mov rax, <num>" instruction
 end
 
 function syscall.resolve(list)
     for name, num in pairs(list) do
-        if PLATFORM == "ps4" then
-            if syscall.syscall_wrapper[num] then
-                syscall[name] = function_rop(syscall.syscall_wrapper[num])
-            else
-                printf("warning: syscall %s (%d) not found", name, num)
-            end
-        elseif PLATFORM == "ps5" then
-            syscall[name] = syscall_rop(num)
-        end
+        syscall[name] = syscall_rop(num)
     end
 end
 
@@ -1982,8 +1960,8 @@ function remote_lua_loader(port)
     local maxsize = 500 * 1024  -- 500kb
     local buf = bump.alloc(maxsize)
     
-    sleep(5)
-    memory.write_qword(0x41414141, 0x4242)
+    -- sleep(5)
+    -- memory.write_qword(0x41414141, 0x4242)
 
     local sock_fd = syscall.socket(AF_INET, SOCK_STREAM, 0):tonumber()
     if sock_fd < 0 then
@@ -2108,8 +2086,15 @@ function get_version()
         local ver = memory.read_buffer(buf+2, 2)
         version = string.format('%x.%02x', string.byte(ver:sub(2,2)), string.byte(ver:sub(1,1)))
     end
+    
+    -- TODO: Verify on PS5
+    if sysctlbyname("machdep.cpumode_platform", buf, size, 0, 0) then
+        platform = "ps4"
+    else
+        platform = "ps5"
+    end
 
-    return version
+    return platform, version
 end
 
 function sigaction(signum, action, old_action)
@@ -2177,7 +2162,7 @@ function main()
 
     print("[+] syscall resolved")
 
-    FW_VERSION = get_version()
+    PLATFORM, FW_VERSION = get_version()
     signal_handler()
 
     -- stable but exhaust memory
