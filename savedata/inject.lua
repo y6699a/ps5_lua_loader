@@ -1,10 +1,13 @@
 
 PLATFORM = "ps4"  -- ps4 or ps5
+LOG_TO_KLOG = true
 FW_VERSION = nil
 
-WRITABLE_PATH = "/av_contents/content_tmp/"
-LOG_FILE = WRITABLE_PATH .. "log.txt"
-log_fd = io.open(LOG_FILE, "w")
+if not LOG_TO_KLOG then
+    WRITABLE_PATH = "/av_contents/content_tmp/"
+    LOG_FILE = WRITABLE_PATH .. "log.txt"
+    log_fd = io.open(LOG_FILE, "w")
+end
 
 eboot_base = nil
 libc_base = nil
@@ -408,14 +411,20 @@ function prepare_arguments(...)
     return s
 end
 
-function print(...)
-    log_fd:write(prepare_arguments(...) .. "\n")
-    log_fd:flush()
+if not LOG_TO_KLOG then
+    function print(...)
+        log_fd:write(prepare_arguments(...) .. "\n")
+        log_fd:flush()
+    end
 end
 
 function printf(fmt, ...)
-    log_fd:write(string.format(fmt, ...) .. "\n")
-    log_fd:flush()
+    if LOG_TO_KLOG then
+        print(string.format(fmt, ...) .. "\n")
+    else
+        log_fd:write(string.format(fmt, ...) .. "\n")
+        log_fd:flush()
+    end
 end
 
 function file_write(filename, data, mode)
