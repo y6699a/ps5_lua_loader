@@ -1959,8 +1959,9 @@ end
 
 function get_error_string()
     local strerror = function_rop(libc_addrofs.strerror)
-    local error = function_rop(libc_addrofs.error)
-    return memory.read_null_terminated_string(strerror(error()))
+    local error_func = function_rop(libc_addrofs.error)
+    local errno = memory.read_qword(error_func())
+    return errno:tonumber() .. " " .. memory.read_null_terminated_string(strerror(errno))
 end
 
 function remote_lua_loader(port)
