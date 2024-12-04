@@ -82,17 +82,24 @@ function sceListenFTP(ftp_port)
     -- Spawn a thread to accept incoming clients.
     -- Add commands, such as LIST, PWD, USER, PASV, PORT etc...
     -- sceKernelSendNotificationRequest("FTP Server running on port " .. ftp_port)
+    
+    -- aight, we closing this connection for now.
+    if sceNetSocketClose(server_sock) < 0 then
+        error("sceNetSocketClose() error: " .. get_error_string())
+    end
 end
 
 function main()
     syscall.resolve({
-        recvfrom = 29,
+        recvfrom = 29, -- recv.
         getsockname = 32,
         access = 33,
-        sendto = 133, -- this is send.
+        sendto = 133, -- send.
         stat = 188,
         getdents = 272,
         sendfile = 393,
+        
+        -- need to find readlink
     })
 
     sceListenFTP(3232)
