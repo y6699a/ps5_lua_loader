@@ -3,9 +3,9 @@ function locate_notify()
     if PLATFORM == "ps4" then
         local libkernel_text = memory.read_buffer(libkernel_base, 0x40000)
         local matches = find_pattern(libkernel_text, "55 48 89 E5 41 57 41 56 41 54 53 49 89 F4")
-        for i, offset in ipairs(matches) do
-            sceKernelSendNotificationRequest__Address = libkernel_base:tonumber() + offset - 1
-            printf("%x\n", sceKernelSendNotificationRequest__Address)
+        if matches and matches[1] ~= nil then
+            sceKernelSendNotificationRequest__Address = libkernel_base:tonumber() + matches[1] - 1
+            printf("sceKernelSendNotificationRequest__Address: %x\n", sceKernelSendNotificationRequest__Address)
         end
     end
 end
