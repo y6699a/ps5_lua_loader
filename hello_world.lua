@@ -17,6 +17,7 @@ function main()
     printf("libc base @ " .. hex(libc_base))
     printf("libkernel base @ " .. hex(libkernel_base))
 
+    sceKernelSendNotificationRequest("demo")
 end
 
 main()
