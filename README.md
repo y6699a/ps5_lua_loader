@@ -9,6 +9,11 @@ Currently this loader is specific for the following list of games:
 4. Hamidashi Creative Demo (CUSA27390) - Requires latest firmware to download from PSN
 5. Aikagi Kimi to Issho ni Pack (CUSA16229)
 
+And the payloads:
+1. hello_world.lua - Prints basic information back from the game process - its process id, the base of the eboot, libc and libkernel.
+2. sigsegv_crash_trigger.lua - Triggers a SIGSEGV crash that should be signal handled without crashing the game process.
+3. notification_popup.lua - (Currently PS4-only) Triggers a notification popup with 'Hello World' on the PlayStation.
+
 ### Usage on jailbroken PS4 with disc version
 
 1. Play the game for a while until you can create save data
