@@ -7,7 +7,7 @@ Currently this loader is specific for the following list of games:
 2. Aibeya (CUSA17068)
 3. Hamidashi Creative (CUSA27389)
 4. Hamidashi Creative Demo (CUSA27390) - Requires latest firmware to download from PSN
-5. Aikagi Kimi to Isshoni Pack (CUSA16229)
+5. Aikagi Kimi to Issho ni Pack (CUSA16229)
 
 ### Usage on jailbroken PS4 with disc version
 
