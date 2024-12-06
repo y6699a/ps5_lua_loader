@@ -17,7 +17,7 @@ games_identification = {
     [0xbb0] = "RaspberryCube",
     [0xb90] = "Aibeya",
     [0x420] = "HamidashiCreative",
-    [0x5d0] = "A",
+    [0x5d0] = "AikagiKimiIsshoniPack",
     [0x280] = "C",
     [0x600] = "E",
     [0xd80] = "F",
@@ -192,7 +192,7 @@ gadget_table = {
             gettimeofday_import = 0x1179a8, -- syscall wrapper
         }
     },
-    a = {
+    aikagi_kimi_isshoni_pack = {
         gadgets = {    
             ["ret"] = 0x4c,
             ["jmp $"] = nil,
@@ -1107,11 +1107,11 @@ function lua.resolve_game(luaB_auxwrap)
         eboot_addrofs = gadget_table.hamidashi_creative.eboot_addrofs
         libc_addrofs = gadget_table.hamidashi_creative.libc_addrofs
         gadgets = gadget_table.hamidashi_creative.gadgets
-    elseif games_identification[nibbles] == "A" then
-        print("[+] Game identified as A")
-        eboot_addrofs = gadget_table.a.eboot_addrofs
-        libc_addrofs = gadget_table.a.libc_addrofs
-        gadgets = gadget_table.a.gadgets
+    elseif games_identification[nibbles] == "AikagiKimiIsshoniPack" then
+        print("[+] Game identified as Aikagi Kimi to Isshoni Pack")
+        eboot_addrofs = gadget_table.aikagi_kimi_isshoni_pack.eboot_addrofs
+        libc_addrofs = gadget_table.aikagi_kimi_isshoni_pack.libc_addrofs
+        gadgets = gadget_table.aikagi_kimi_isshoni_pack.gadgets
     elseif games_identification[nibbles] == "C" then -- TODO: Test
         print("[+] Game identified as C/D")
         eboot_addrofs = gadget_table.c.eboot_addrofs
