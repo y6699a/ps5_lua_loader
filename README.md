@@ -13,6 +13,7 @@ And the payloads:
 1. hello_world.lua - Prints basic information back from the game process - its process id, the base of the eboot, libc and libkernel.
 2. sigsegv_crash_trigger.lua - Triggers a SIGSEGV crash that should be signal handled without crashing the game process.
 3. notification_popup.lua - (Currently PS4-only) Triggers a notification popup with 'Hello World' on the PlayStation.
+4. sigbus_crash_trigger.lua - Triggers a SIGBUS crash that should be signal handled without crashing the game process.
 
 ### Usage on jailbroken PS4 with disc version
 
