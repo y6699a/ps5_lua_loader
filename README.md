@@ -14,6 +14,7 @@ And the payloads:
 2. sigsegv_crash_trigger.lua - Triggers two SIGSEGV crashes in succession that should be signal handled without crashing the game process.
 3. notification_popup.lua - (Currently PS4-only) Triggers a notification popup with 'Hello World' on the PlayStation.
 4. sigbus_crash_trigger.lua - Triggers a SIGBUS crash that should be signal handled without crashing the game process.
+5. streaming_output.lua - Prints basic information and trigger two SIGSEGV crashes in the middle, to demonstrate how streaming real-time output works.
 
 ### Usage on jailbroken PS4 with disc version
 
