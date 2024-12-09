@@ -2021,22 +2021,21 @@ end
 
 
 
--- todo: figure out a way to write to socket directly for realtime output
-function run_lua_code(lua_code)
+function run_lua_code(lua_code, client_fd)
 
     local script, err = loadstring(lua_code)
     if not script then
         return "error loading script: " .. err
     end
 
-    local output = {}
-
     local env = {
         print = function(...)
-            table.insert(output, prepare_arguments(...))
+            local out = prepare_arguments(...) .. "\n"
+            syscall.write(client_fd, out, #out)
         end,
         printf = function(fmt, ...)
-            table.insert(output, string.format(fmt, ...))
+            local out = string.format(fmt, ...) .. "\n"
+            syscall.write(client_fd, out, #out)
         end
     }
 
@@ -2050,10 +2049,8 @@ function run_lua_code(lua_code)
 
     -- pass error to client
     if err then
-        table.insert(output, err)
+        syscall.write(client_fd, err, #err)
     end
-
-    return table.concat(output, "\n")
 end
 
 function get_error_string()
@@ -2141,8 +2138,7 @@ function remote_lua_loader(port)
             -- write to signal handler
             signal_handler_rop(client_fd)
             
-            local output = run_lua_code(lua_code)
-            syscall.write(client_fd, output, #output)
+            run_lua_code(lua_code, client_fd)
         else
             local err = string.format("error: lua code exceed maxsize " ..
                 "(given %s maxsize %s)\n", hex(size), hex(maxsize))
@@ -2252,24 +2248,24 @@ function signal_handler()
 end
 
 function signal_handler_rop(client_fd)
-    output = string.rep("\0", 0x10)
-    ucontext_struct = string.rep("\1", 0x8)
-    local output_addr = ropchain.resolve_value(output)
+    ucontext_struct = string.rep("\0", 0x8)
     local ucontext_struct_addr = ropchain.resolve_value(ucontext_struct)
     local mcontext_offset = 0x40
     local reg_rbp_offset = 0x48
     local reg_rsp_offset = 0xb8
+    local output_addr = 0xfb000080
     
     -- write error address back to socket
     local chain = ropchain(0xfb0000bd - 0x8)
-    chain:push_store_rdi_into_memory(output_addr) -- rdi contains signal code
-    chain:push_store_rax_into_memory(output_addr + 0x8) -- rax contains crashing address
+    memory.write_dword(output_addr, 0x13371337) -- write magic value
+    chain:push_store_rdi_into_memory(output_addr + 0x4) -- rdi contains signal code
+    chain:push_store_rax_into_memory(output_addr + 0xc) -- rax contains crashing address
     chain:push_store_rdx_into_memory(ucontext_struct_addr)
     
     chain:push_set_rdi(ropchain.resolve_value(client_fd))
     chain:push_set_r9_wo_call(0)
-    chain:push_set_rsi(ropchain.resolve_value(output))
-    chain:push_set_rdx(ropchain.resolve_value(#output))
+    chain:push_set_rsi(output_addr) -- output
+    chain:push_set_rdx(20) -- output len
     chain:push_set_r8(0)
     chain:push_set_rax(4) -- syscall_num=write
     chain:push_fcall_raw(WRITE_ADDR)
