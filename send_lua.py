@@ -52,10 +52,15 @@ def send_payload(ip, port, filepath):
         # send size (qword) + <buffer..>
         size = struct.pack("<Q", len(data))   # little endian
         sock.sendall(size + data)
-
+        
         buffer = b""  # Buffer to accumulate partial data
         while True:
-            chunk = sock.recv(4096)
+            try:
+                chunk = sock.recv(4096)
+            except Exception as e:
+                print(e)
+                break
+            
             if not chunk:
                 break
             
