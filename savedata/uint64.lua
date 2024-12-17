@@ -129,11 +129,6 @@ function bit32.arshift(x, s_amount)
     end
 end
 
-
-
-
-
-
 --
 -- uint64 class
 --
@@ -154,8 +149,8 @@ setmetatable(uint64, {
     end
 })
 
-function is_uint64(v) 
-    return type(v) == "table" and v.h and v.l and true or false 
+function is_uint64(v)
+    return type(v) == "table" and v.h and v.l and true or false
 end
 
 function ub8(n) 

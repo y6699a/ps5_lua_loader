@@ -2,7 +2,8 @@
 --
 -- memory class
 --
--- provide arbitrary r/w & allocation primitives
+-- initially uses lua weak r/w primitives
+-- once native handler is registered, this class will be upgraded to arbitrary r/w primitives
 --
 
 memory = {}
@@ -47,14 +48,8 @@ function memory.read_multiple_qwords(addr, count)
 end
 
 function memory.write_buffer(dest, buffer)
-    assert(dest and buffer)
-    if native_invoke then
-        native.write_buffer(dest, buffer)
-    elseif memory.memcpy then
-        memory.memcpy(dest, lua.addrof(buffer)+24, #buffer)
-    else
-        error("no write primitive available")
-    end
+    assert(native_invoke and dest and buffer)
+    native.write_buffer(dest, buffer)
 end
 
 function memory.write_byte(dest, value)
@@ -70,7 +65,29 @@ function memory.write_dword(dest, value)
 end
 
 function memory.write_qword(dest, value)
-    memory.write_buffer(dest, ub8(value))
+    assert(dest and value)
+    if native_invoke then
+        memory.write_buffer(dest, ub8(value))
+    else
+        -- weak primitive because of data corruption
+        lua.write_qword(dest, value)
+    end
+end
+
+function memory.write_multiple_qwords(addr, list)
+    for i,v in ipairs(list) do
+        memory.write_qword(addr+8*(i-1), list[i])
+    end
+end
+
+function memory.memcpy(dest, src, size)
+    size = uint64(size):tonumber()
+    if native_invoke then
+        memory.write_buffer(dest, memory.read_buffer(src, size))
+    else
+        assert(size % 8 == 0)
+        memory.write_multiple_qwords(dest, memory.read_multiple_qwords(src, size / 8))
+    end
 end
 
 function memory.hex_dump(addr, size)

@@ -26,22 +26,6 @@ function prepare_arguments(...)
     return s
 end
 
-if not options.log_to_klog then
-    function print(...)
-        log_fd:write(prepare_arguments(...) .. "\n")
-        log_fd:flush()
-    end
-end
-
-function printf(fmt, ...)
-    if options.log_to_klog then
-        print(string.format(fmt, ...) .. "\n")
-    else
-        log_fd:write(string.format(fmt, ...) .. "\n")
-        log_fd:flush()
-    end
-end
-
 function file_write(filename, data, mode)
     local fd = io.open(filename, mode or "wb")
     fd:write(data)

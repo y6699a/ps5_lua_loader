@@ -37,7 +37,9 @@ function thread.run(obj, ...)
     if obj.stack_base then
         chain = obj
     else
-        chain = ropchain()
+        chain = ropchain({
+            fcall_stub_padding_size = 0x50000  -- todo: create pool of fcall stub for thread
+        })
         if obj.syscall_no then
             chain:push_syscall_with_ret(obj, ...)
         else

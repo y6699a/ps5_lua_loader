@@ -5,7 +5,6 @@ FW_VERSION = nil
 options = {
     log_to_klog = true,
     enable_signal_handler = true,
-    enable_native_handler = true,
 }
 
 if not options.log_to_klog then
@@ -19,25 +18,37 @@ eboot_base = nil
 libc_base = nil
 libkernel_base = nil
 
+gadgets = nil
+eboot_addrofs = nil
+libc_addrofs = nil
+
 native_cmd_handler = nil
 native_invoke = nil
 
-native_cmd = {
-    read_buffer = 0,
-    write_buffer = 1,
-    fcall = 2,
-}
+if not options.log_to_klog then
+    function print(...)
+        log_fd:write(prepare_arguments(...) .. "\n")
+        log_fd:flush()
+    end
+end
 
-e:include(e:var("s.savepath").."/offsets.lua")
-e:include(e:var("s.savepath").."/misc.lua")
-e:include(e:var("s.savepath").."/uint64.lua")
-e:include(e:var("s.savepath").."/lua.lua")
-e:include(e:var("s.savepath").."/memory.lua")
-e:include(e:var("s.savepath").."/ropchain.lua")
-e:include(e:var("s.savepath").."/syscall.lua")
-e:include(e:var("s.savepath").."/signal.lua")
-e:include(e:var("s.savepath").."/native.lua")
-e:include(e:var("s.savepath").."/thread.lua")
+function printf(fmt, ...)
+    print(string.format(fmt, ...) .. "\n")
+end
+
+
+package.path = package.path .. ";/savedata0/?.lua"
+
+require "offsets"
+require "misc"
+require "uint64"
+require "lua"
+require "memory"
+require "ropchain"
+require "syscall"
+require "signal"
+require "native"
+require "thread"
 
 
 function run_lua_code(lua_code, client_fd)
@@ -173,20 +184,17 @@ end
 
 function main()
 
-    -- setup read & limited write primitives
+    -- setup limited read & write primitives
     lua.setup_primitives()
+    print("[+] lua r/w primitives achieved")
 
-    -- setup better write primitive
-    memory.memcpy = fcall(libc_addrofs.memcpy)
+    syscall.init()
+    print("[+] syscall initialized")
 
-    print("[+] usermode r/w primitives achieved")
+    native.init()
+    print("[+] native handler registered")
 
-    syscall.init()  -- enable syscall
-
-    if options.enable_native_handler then
-        native.init()
-        print("[+] native handler registered")
-    end
+    print("[+] arbitrary r/w primitives achieved")
 
     -- resolve required syscalls for remote lua loader 
     syscall.resolve({
@@ -204,15 +212,13 @@ function main()
         sigaction = 416,
     })
 
-    print("[+] syscall initialized")
-
-    FW_VERSION = get_version()
-
     -- setup signal handler
     if options.enable_signal_handler then
         signal.init()
         print("[+] signal handler registered")
     end
+
+    FW_VERSION = get_version()
 
     -- stable but exhaust memory
     run_nogc(function()
