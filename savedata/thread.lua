@@ -147,7 +147,7 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
 
         old_print = print
         function print(...)
-            local out = prepare_arguments(...)
+            local out = prepare_arguments(...) .. "\n"
             if client_fd then
                 syscall.write(client_fd, out, #out)
             end
@@ -192,7 +192,6 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
     local ret = luaL_loadstring(L, finalized_lua_code):tonumber()
     if ret ~= 0 then
         local err = memory.read_null_terminated_string(lua_tolstring(L, -1, 0))
-        err =  "luaL_loadstring() error: " .. err
         print(err)
         if client_fd then
             syscall.write(client_fd, err, #err)
@@ -232,7 +231,7 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
         })
     end
 
-    -- run rop in other thread
+    -- run rop in new thread
     local thr = thread.run(chain)
 
     printf("[+] running lua code on new thread (tid %s)", hex(thr.tid))
