@@ -65,6 +65,15 @@ gadget_table = {
             luaL_checklstring = 0x1a5180,
             lua_pushlstring = 0x1a3280,
             lua_pushinteger = 0x1a3260,
+
+            luaL_newstate = 0x1a64d0,
+            luaL_openlibs = 0x1b06e0,
+            lua_setfield = 0x1a3d40,
+            luaL_loadstring = 0x1a6460,
+            lua_pcall = 0x1a43e0,
+            lua_pushcclosure = 0x1a3490,
+            lua_tolstring = 0x1a2990,
+            lua_pushstring = 0x1a32e0,
         },
         libc_addrofs = {
             calloc = 0x58a50,
@@ -139,6 +148,15 @@ gadget_table = {
             luaL_checklstring = 0x1ac170,
             lua_pushlstring = 0x1aa260,
             lua_pushinteger = 0x1aa240,
+            
+            luaL_newstate = 0x1ad4b0,
+            luaL_openlibs = 0x1b7680,
+            lua_setfield = 0x1aad30,
+            luaL_loadstring = 0x1ad440,
+            lua_pcall = 0x1ab3d0,
+            lua_pushcclosure = 0x1aa470,
+            lua_tolstring = 0x1a9970,
+            lua_pushstring = 0x1aa2c0,
         },
         libc_addrofs = {
             calloc = 0x57e00,

@@ -3,6 +3,10 @@
 -- misc functions
 --
 
+function printf(fmt, ...)
+    print(string.format(fmt, ...) .. "\n")
+end
+
 function notify(s)
     e:tag{"dialog", title="", message=s}
 end
@@ -114,27 +118,6 @@ function dump_table(o, depth, indent)
     end
 end
 
--- credit: https://github.com/iryont/lua-struct/blob/master/src/struct.lua#L149-L174
-function string_to_double(x)
-    assert(#x == 8)
-    -- x = string.reverse(x)  -- if big endian
-    local sign = 1
-    local mantissa = string.byte(x, 7) % 16
-    for i = 6, 1, -1 do
-        mantissa = mantissa * (2 ^ 8) + string.byte(x, i)
-    end
-    if string.byte(x, 8) > 127 then
-        sign = -1
-    end
-    local exponent = (string.byte(x, 8) % 128) * 16 + math.floor(string.byte(x, 7) / 16)
-    if exponent == 0 then
-        return 0.0
-    else
-        mantissa = (math.ldexp(mantissa, -52) + 1) * sign
-        return math.ldexp(mantissa, exponent - 1023)
-    end
-end
-
 function align_to(v,n)
     if is_uint64(v) then
         n = uint64(n)
@@ -227,4 +210,31 @@ function get_version()
     end
 
     return version
+end
+
+function serialize(t)
+    local function ser(o)
+        if type(o) == "number" then
+            return tostring(o)
+        elseif type(o) == "string" then
+            return string.format("%q", o)
+        elseif is_uint64(o) then
+            return string.format("uint64(%q)", hex(o))
+        elseif type(o) == "table" then
+            local s = "{"
+            for k, v in pairs(o) do
+                local key
+                if type(k) == "string" then
+                    key = "[" .. string.format("%q", k) .. "]"
+                else
+                    key = "[" .. tostring(k) .. "]"
+                end
+                s = s .. key .. "=" .. ser(v) .. ","
+            end
+            return s .. "}"
+        else
+            return "nil"
+        end
+    end
+    return ser(t)
 end

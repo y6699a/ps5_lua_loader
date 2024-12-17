@@ -60,6 +60,7 @@ function ropchain.create_fcall_stub(padding_size)
     })
     ropchain.dont_recurse = false
 
+    stub:align_stack()
     stub:push(0) -- fn addr
     fcall_stub.fn_addr = stub:get_rsp() - 0x8
 
@@ -79,9 +80,6 @@ function ropchain:__tostring()
 
     table.insert(result, string.format("fcall_stub.fn_addr: %s",
         hex(self.fcall_stub.fn_addr)))
-
-    table.insert(result, string.format("fcall_stub.retval_addr: %s",
-        hex(self.fcall_stub.retval_addr)))
 
     table.insert(result, string.format("fcall_stub.return_addr: %s\n",
         hex(self.fcall_stub.return_addr)))
@@ -468,17 +466,17 @@ function ropchain:dispatch_jumptable_with_rax_index(jump_table)
 end
 
 -- only unsigned 32-bit comparison is supported
-function ropchain:create_branch(value_address, op, compare_address)
+function ropchain:create_branch(value_address, op, compare_value)
 
     local jump_table = memory.alloc(0x10)
 
     if gadgets["cmp [rcx], eax; ret"] then
         self:push_set_rcx(value_address)
-        self:push_set_rax_from_memory(compare_address)
+        self:push_set_rax(compare_value)
         self:push(gadgets["cmp [rcx], eax; ret"])
     else
-        self:push_set_rbx(compare_address)
-        self:push_set_rax_from_memory(compare_address)
+        self:push_set_rax(value_address)
+        self:push_set_rbx(compare_value)
         self:push(gadgets["cmp [rax], ebx; ret"])
     end
 
@@ -501,13 +499,13 @@ function ropchain:create_branch(value_address, op, compare_address)
     return jump_table
 end
 
-function ropchain:gen_loop(value_address, op, compare_address, callback)
+function ropchain:gen_loop(value_address, op, compare_value, callback)
 
     -- {
     local target_loop = self:get_rsp()
     callback()
-    -- } while (memory[value_address] <op> memory[compare_address])
-    local jump_table = self:create_branch(value_address, op, compare_address)
+    -- } while (memory[value_address] <op> compare_value])
+    local jump_table = self:create_branch(value_address, op, compare_value)
 
     memory.write_multiple_qwords(jump_table, {
         self:get_rsp(), -- comparison false

@@ -3,15 +3,12 @@ PLATFORM = "ps4"  -- ps4 or ps5
 FW_VERSION = nil
 
 options = {
-    log_to_klog = true,
     enable_signal_handler = true,
 }
 
-if not options.log_to_klog then
-    WRITABLE_PATH = "/av_contents/content_tmp/"
-    LOG_FILE = WRITABLE_PATH .. "log.txt"
-    log_fd = io.open(LOG_FILE, "w")
-end
+WRITABLE_PATH = "/av_contents/content_tmp/"
+LOG_FILE = WRITABLE_PATH .. "loader_log.txt"
+log_fd = io.open(LOG_FILE, "w")
 
 game_name = nil
 eboot_base = nil
@@ -25,23 +22,21 @@ libc_addrofs = nil
 native_cmd_handler = nil
 native_invoke = nil
 
-if not options.log_to_klog then
-    function print(...)
-        log_fd:write(prepare_arguments(...) .. "\n")
-        log_fd:flush()
-    end
+old_print = print
+function print(...)
+    local out = prepare_arguments(...) .. "\n"
+    old_print(out)
+    log_fd:write(out)
+    log_fd:flush()
 end
-
-function printf(fmt, ...)
-    print(string.format(fmt, ...) .. "\n")
-end
-
 
 package.path = package.path .. ";/savedata0/?.lua"
 
 require "offsets"
 require "misc"
+require "bit32"
 require "uint64"
+require "struct"
 require "lua"
 require "memory"
 require "ropchain"
@@ -49,7 +44,6 @@ require "syscall"
 require "signal"
 require "native"
 require "thread"
-
 
 function run_lua_code(lua_code, client_fd)
 
@@ -68,7 +62,8 @@ function run_lua_code(lua_code, client_fd)
         printf = function(fmt, ...)
             local out = string.format(fmt, ...) .. "\n"
             syscall.write(client_fd, out, #out)
-        end
+        end,
+        client_fd = client_fd,
     }
 
     setmetatable(env, { __index = _G })
@@ -175,7 +170,6 @@ function remote_lua_loader(port)
                 "(given %s maxsize %s)\n", hex(size), hex(maxsize))
             syscall.write(client_fd, err, #err)
         end
-
         syscall.close(client_fd)
     end
 
@@ -219,6 +213,8 @@ function main()
     end
 
     FW_VERSION = get_version()
+
+    thread.init()
 
     -- stable but exhaust memory
     run_nogc(function()

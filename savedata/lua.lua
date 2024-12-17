@@ -189,7 +189,7 @@ function lua.resolve_address()
     local luaB_auxwrap = nil
     local consume = {}
     
-    for i=1,64 do
+    for i=1,1024 do
 
         local co = coroutine.wrap(function() end)
         consume[i] = co
@@ -326,8 +326,8 @@ end
 function lua.write_qword(addr, value)
     local setbit = uint64(1):lshift(56)
     value = uint64(value)
-    lua.write_double(addr, string_to_double(ub8(value + setbit)))
-    lua.write_double(addr+1, string_to_double(ub8(value:rshift(8) + setbit)))
+    lua.write_double(addr, struct.unpack("<d", ub8(value + setbit)))
+    lua.write_double(addr+1, struct.unpack("<d", ub8(value:rshift(8) + setbit)))
 end
 
 function lua.create_fake_cclosure(addr)

@@ -91,6 +91,7 @@ function memory.memcpy(dest, src, size)
 end
 
 function memory.hex_dump(addr, size)
+    size = size or 0x40
     return hex_dump(memory.read_buffer(addr, size), addr)
 end
 
