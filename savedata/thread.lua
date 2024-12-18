@@ -223,31 +223,31 @@ function run_lua_code_in_new_thread(lua_code, opt)
 
     if opt.client_fd then
 
+        local jmp_table = chain:create_branch(chain.retval_addr[1], "~=", 0)
+        local true_target = chain:get_rsp()
+
         -- if lua_pcall(L, 0, LUA_MULTRET, 0) ~= LUA_OK then
-        local jmp_table = chain:create_branch(chain.retval_addr[1], "==", 0)
-        local current_target = chain:get_rsp()
+            local string_len = memory.alloc(0x8)
+            chain:push_fcall_with_ret(eboot_addrofs.lua_tolstring, L, -1, string_len)
 
-        local string_len = memory.alloc(0x8)
-        chain:push_fcall_with_ret(eboot_addrofs.lua_tolstring, L, -1, string_len)
-
-        -- print error to client
-        chain:push_syscall_raw(syscall.write, function ()
-            chain:push_set_reg_from_memory("rdx", string_len)
-            chain:push_set_reg_from_memory("rsi", chain.retval_addr[2])
-            chain:push_set_rdi(opt.client_fd)
-        end)
+            -- print error to client
+            chain:push_syscall_raw(syscall.write, function ()
+                chain:push_set_reg_from_memory("rdx", string_len)
+                chain:push_set_reg_from_memory("rsi", chain.retval_addr[2])
+                chain:push_set_rdi(opt.client_fd)
+            end)
         -- end
 
-        local jmp_target = chain:get_rsp()
+        local false_target = chain:get_rsp()
+        
+        memory.write_multiple_qwords(jmp_table, {
+            false_target, -- comparison false
+            true_target, -- comparison true
+        })
 
         if opt.close_socket_after_finished then
             chain:push_syscall(syscall.close, opt.client_fd)
         end
-
-        memory.write_multiple_qwords(jmp_table, {
-            current_target, -- comparison false
-            jmp_target, -- comparison true
-        })
     end
 
     -- run rop in new thread

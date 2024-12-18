@@ -4,7 +4,7 @@
 --
 
 function printf(fmt, ...)
-    print(string.format(fmt, ...) .. "\n")
+    print(string.format(fmt, ...))
 end
 
 function notify(s)

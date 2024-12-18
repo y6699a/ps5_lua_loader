@@ -126,8 +126,7 @@ function native.setup_cmd_handler(pivot_handler)
     chain:push(gadgets["mov rax, [rax]; ret"])  -- get ret addr from rsp
     chain:push_store_rax_into_memory(chain.jmpbuf)  -- fix rip
 
-    chain:push_set_rax_from_memory(chain.jmpbuf+0x8) -- get rbx (lua state)
-
+    -- get native cmd option from caller
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, chain.lua_state, 2, 0)
 
     -- pivot to appropriate handler
@@ -174,10 +173,10 @@ function native.setup_pivot_handler(pivot_handler)
     chain:push_fcall(libc_addrofs.setjmp, jmpbuf)
     chain.lua_state_addr = jmpbuf + 0x8
 
-    -- get native handle
+    -- get native cmd handler from caller
     native.get_lua_opt(chain, eboot_addrofs.luaL_optinteger, chain.lua_state_addr, 1, 0)
 
-    -- pivot to thread's native handler rop
+    -- pivot to native cmd handler
     chain:push_set_reg_from_memory("rsp", chain.retval_addr[1])
     
     return chain

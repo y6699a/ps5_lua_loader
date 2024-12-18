@@ -4,7 +4,8 @@ FW_VERSION = nil
 
 options = {
     enable_signal_handler = true,
-    enable_run_payload_in_new_thread = true,
+    run_loader_with_gc_disabled = true,
+    run_payload_in_new_thread = true,
 }
 
 WRITABLE_PATH = "/av_contents/content_tmp/"
@@ -165,7 +166,7 @@ function remote_lua_loader(port)
                 signal.set_sink_fd(client_fd)
             end
 
-            if options.enable_run_payload_in_new_thread then
+            if options.run_payload_in_new_thread then
                 run_lua_code_in_new_thread(lua_code, {
                     client_fd = client_fd,
                     close_socket_after_finished = true,
@@ -225,15 +226,16 @@ function main()
 
     thread.init()
 
-    -- stable but exhaust memory
-    run_nogc(function()
+    local run_loader = function()
         local port = 9026
         remote_lua_loader(port)
-    end)
+    end
 
-    -- -- less stable but doesnt exhaust memory
-    -- local port = 9026
-    -- remote_lua_loader(port)
+    if options.run_loader_with_gc_disabled then
+        run_nogc(run_loader) -- stable but exhaust memory
+    else
+        run_loader() -- less stable but doesnt exhaust memory
+    end
 
     notify("finished")
 

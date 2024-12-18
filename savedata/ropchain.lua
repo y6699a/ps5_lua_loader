@@ -484,7 +484,7 @@ function ropchain:create_branch(value_address, op, compare_value)
 
     if op == "==" then
         self:push(gadgets["sete al; ret"])
-    elseif op == "!=" then
+    elseif op == "~=" then
         self:push(gadgets["setne al; ret"])
     elseif op == ">" then
         self:push(gadgets["seta al; ret"])
