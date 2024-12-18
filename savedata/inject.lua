@@ -204,7 +204,6 @@ function main()
     syscall.resolve({
         read = 3,
         write = 4,
-        open = 5,
         close = 6,
         accept = 30,
         socket = 97,
