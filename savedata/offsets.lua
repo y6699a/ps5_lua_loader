@@ -244,6 +244,13 @@ gadget_table = {
             error = 0x168,
             sceKernelGetModuleInfoFromAddr = 0x198,
             gettimeofday_import = 0x1179a8, -- syscall wrapper
+
+            Thrd_join = 0x4c1c0,
+            Thrd_exit = 0x4c240,
+            Thrd_create = 0x4c3c0,
+
+            scePthreadMutexLock = 0x1d8,
+            scePthreadMutexUnlock = 0x1e8,
         }
     },
     aikagi_kimi_isshoni_pack = {
@@ -312,6 +319,13 @@ gadget_table = {
             error = 0x178,
             sceKernelGetModuleInfoFromAddr = 0x1a8,
             gettimeofday_import = 0x11c010, -- syscall wrapper
+
+            Thrd_join = 0x57ed0,
+            Thrd_exit = 0x57f50,
+            Thrd_create = 0x58060,
+
+            scePthreadMutexLock = 0x1e8,
+            scePthreadMutexUnlock = 0x1f8,
         }
     },
     -- not supporting new mov r9, consider dropping
@@ -381,6 +395,13 @@ gadget_table = {
             error = 0x148,
             sceKernelGetModuleInfoFromAddr = 0x548,
             gettimeofday_import = 0xdbd60, -- syscall wrapper
+
+            Thrd_join = 0x5da90,
+            Thrd_exit = 0x5db10,
+            Thrd_create = 0x5dc20,
+
+            scePthreadMutexLock = 0x1b8,
+            scePthreadMutexUnlock = 0x1c8,
         }
     },
     e = {
@@ -449,6 +470,13 @@ gadget_table = {
             error = 0x138,
             sceKernelGetModuleInfoFromAddr = 0x568,
             gettimeofday_import = 0xefd10, -- syscall wrapper
+
+            Thrd_join = 0x21520,
+            Thrd_exit = 0x215a0,
+            Thrd_create = 0x216b0,
+
+            scePthreadMutexLock = 0x248,
+            scePthreadMutexUnlock = 0x258,
         }
     },
     f = {
@@ -517,6 +545,13 @@ gadget_table = {
             error = 0x168,
             sceKernelGetModuleInfoFromAddr = 0x198,
             gettimeofday_import = 0x204060, -- syscall wrapper
+
+            Thrd_join = 0x57260,
+            Thrd_exit = 0x572e0,
+            Thrd_create = 0x573f0,
+
+            scePthreadMutexLock = 0x1d8,
+            scePthreadMutexUnlock = 0x1e8,
         }
     },
 }
