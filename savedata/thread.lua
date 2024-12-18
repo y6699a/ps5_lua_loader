@@ -79,8 +79,16 @@ function thread:join()
 
     return memory.read_qword(ret_value)
 end
- 
-function run_lua_code_in_new_thread(lua_code, client_fd, args)
+
+--
+-- opt = {
+--    client_fd -- output sink fd for new thread
+--    args -- additional data (table) to be passed to new thread
+--    close_socket_after_finished -- if thread should close client_fd after it has finished running
+-- }
+function run_lua_code_in_new_thread(lua_code, opt)
+
+    opt = opt or {}
 
     local LUA_REGISTRYINDEX = -10000
     local LUA_ENVIRONINDEX = -10001
@@ -122,7 +130,10 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
             local data_from_loader = _deserialize(_data_from_loader)
 
             local syscall_tbl = data_from_loader.syscall
-            data_from_loader.syscall = nil
+            data_from_loader.syscall = nil  -- dont copy to global
+
+            native.pivot_handler_rop = data_from_loader.native_pivot_handler_rop
+            data_from_loader.native_pivot_handler_rop = nil  -- dont copy to global
 
             -- copy to global
             for k,v in pairs(data_from_loader) do
@@ -141,6 +152,9 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
 
             -- enable addrof/fakeobj primitives
             lua.setup_victim_table()
+
+            -- enable ability to create thread
+            thread.init()
         end
 
         _payload_init()
@@ -169,8 +183,9 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
         FW_VERSION = FW_VERSION,
         game_name = game_name,
         syscall = syscall,
-        args = args,
-        client_fd = client_fd,
+        native_pivot_handler_rop = native.pivot_handler_rop,
+        args = opt.args,
+        client_fd = opt.client_fd,
     }
 
     local finalized_lua_code = string.format("%s\n%s\n%s", prologue, lua_code, epilogue)
@@ -193,8 +208,8 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
     if ret ~= 0 then
         local err = memory.read_null_terminated_string(lua_tolstring(L, -1, 0))
         print(err)
-        if client_fd then
-            syscall.write(client_fd, err, #err)
+        if opt.client_fd then
+            syscall.write(opt.client_fd, err, #err)
         end
         return
     end
@@ -206,7 +221,7 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
     -- run lua code
     chain:push_fcall_with_ret(eboot_addrofs.lua_pcall, L, 0, LUA_MULTRET, 0)
 
-    if client_fd then
+    if opt.client_fd then
 
         -- if lua_pcall(L, 0, LUA_MULTRET, 0) ~= LUA_OK then
         local jmp_table = chain:create_branch(chain.retval_addr[1], "==", 0)
@@ -219,11 +234,15 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
         chain:push_syscall_raw(syscall.write, function ()
             chain:push_set_reg_from_memory("rdx", string_len)
             chain:push_set_reg_from_memory("rsi", chain.retval_addr[2])
-            chain:push_set_rdi(client_fd)
+            chain:push_set_rdi(opt.client_fd)
         end)
         -- end
 
         local jmp_target = chain:get_rsp()
+
+        if opt.close_socket_after_finished then
+            chain:push_syscall(syscall.close, opt.client_fd)
+        end
 
         memory.write_multiple_qwords(jmp_table, {
             current_target, -- comparison false
@@ -233,8 +252,5 @@ function run_lua_code_in_new_thread(lua_code, client_fd, args)
 
     -- run rop in new thread
     local thr = thread.run(chain)
-
-    printf("[+] running lua code on new thread (tid %s)", hex(thr.tid))
-
     return thr
 end

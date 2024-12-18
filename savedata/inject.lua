@@ -81,12 +81,12 @@ function remote_lua_loader(port)
 
     assert(port)
 
-    AF_INET = 2
-    SOCK_STREAM = 1
-    INADDR_ANY = 0
+    local AF_INET = 2
+    local SOCK_STREAM = 1
+    local INADDR_ANY = 0
 
-    SOL_SOCKET = 0xffff  -- options for socket level
-    SO_REUSEADDR = 4  -- allow local address reuse
+    local SOL_SOCKET = 0xffff  -- options for socket level
+    local SO_REUSEADDR = 4  -- allow local address reuse
 
     local enable = memory.alloc(4)
     local sockaddr_in = memory.alloc(16)
@@ -164,13 +164,21 @@ function remote_lua_loader(port)
                 signal.set_sink_fd(client_fd)
             end
 
-            run_lua_code(lua_code, client_fd)
+            if options.enable_run_payload_in_new_thread then
+                run_lua_code_in_new_thread(lua_code, {
+                    client_fd = client_fd,
+                    close_socket_after_finished = true,
+                })
+            else
+                run_lua_code(lua_code, client_fd)
+                syscall.close(client_fd)
+            end
         else
             local err = string.format("error: lua code exceed maxsize " ..
                 "(given %s maxsize %s)\n", hex(size), hex(maxsize))
             syscall.write(client_fd, err, #err)
+            syscall.close(client_fd)
         end
-        syscall.close(client_fd)
     end
 
     syscall.close(sock_fd)

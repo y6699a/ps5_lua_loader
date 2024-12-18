@@ -570,7 +570,7 @@ function fcall:new(fn_addr, syscall_no)
 
     assert(fn_addr, "invalid function address")
     
-    if not fcall.chain then
+    if not (fcall.chain or native_invoke) then
         fcall.create_initial_chain()
     end
 
