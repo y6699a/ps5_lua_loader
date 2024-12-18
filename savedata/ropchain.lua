@@ -131,17 +131,6 @@ function ropchain:increment_stack()
     return rsp
 end
 
-function ropchain.resolve_value(v)
-    if type(v) == "string" then
-        return lua.addrof(v)+24
-    elseif type(v) == "number" then
-        return uint64(v)
-    elseif is_uint64(v) then
-        return v
-    end
-    errorf("ropchain.resolve_value: invalid type (%s)", type(v))
-end
-
 function ropchain:push(v)
 
     if self.finalized then
@@ -151,7 +140,7 @@ function ropchain:push(v)
     if self.enable_mock_push then
         self:increment_stack()
     else
-        memory.write_qword(self:increment_stack(), ropchain.resolve_value(v))
+        memory.write_qword(self:increment_stack(), lua.resolve_value(v))
     end
 end
 
@@ -621,12 +610,12 @@ function fcall:__call(rdi, rsi, rdx, rcx, r8, r9)
         local arg_addr = fcall.arg_addr
         memory.write_qword(arg_addr.fn_addr, self.fn_addr)
         memory.write_qword(arg_addr.syscall_no, self.syscall_no or 0)
-        memory.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
-        memory.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
-        memory.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
-        memory.write_qword(arg_addr.rcx, ropchain.resolve_value(rcx or 0))
-        memory.write_qword(arg_addr.r8, ropchain.resolve_value(r8 or 0))
-        memory.write_qword(arg_addr.r9, ropchain.resolve_value(r9 or 0))
+        memory.write_qword(arg_addr.rdi, lua.resolve_value(rdi or 0))
+        memory.write_qword(arg_addr.rsi, lua.resolve_value(rsi or 0))
+        memory.write_qword(arg_addr.rdx, lua.resolve_value(rdx or 0))
+        memory.write_qword(arg_addr.rcx, lua.resolve_value(rcx or 0))
+        memory.write_qword(arg_addr.r8, lua.resolve_value(r8 or 0))
+        memory.write_qword(arg_addr.r9, lua.resolve_value(r9 or 0))
         return fcall.chain:execute_through_coroutine()
     end
 end

