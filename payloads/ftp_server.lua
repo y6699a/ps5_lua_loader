@@ -993,6 +993,7 @@ end
 
 function main()
     syscall.resolve({
+        open = 5,
         unlink = 10,
         chmod = 15,
         recvfrom = 29, -- recv.
