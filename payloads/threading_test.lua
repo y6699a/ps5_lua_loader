@@ -21,12 +21,16 @@ function test_print()
         main()
     ]]
 
-    local thr = run_lua_code_in_new_thread(lua_code, client_fd)
+    local thr = run_lua_code_in_new_thread(lua_code, {
+        client_fd = client_fd
+    })
     thr:join()
 end
 
 function test_syntax_error()
-    local thr = run_lua_code_in_new_thread("`", client_fd)
+    local thr = run_lua_code_in_new_thread("`", {
+        client_fd = client_fd
+    })
     thr:join()
 end
 
@@ -36,7 +40,9 @@ function test_runtime_error()
         tbl.notexist()
     ]]
 
-    local thr = run_lua_code_in_new_thread(lua_code, client_fd)
+    local thr = run_lua_code_in_new_thread(lua_code, {
+        client_fd = client_fd
+    })
     thr:join()
 end
 
@@ -55,11 +61,12 @@ function test_write_from_thread()
         main()
     ]]
 
-    local args = {
-        addr = mem
-    }
-
-    local thr = run_lua_code_in_new_thread(lua_code, client_fd, args)
+    local thr = run_lua_code_in_new_thread(lua_code, {
+        client_fd = client_fd,
+        args = {
+            addr = mem  
+        }
+    })
     
     print()
     print("before write from new thread: " .. hex(memory.read_qword(mem)))
