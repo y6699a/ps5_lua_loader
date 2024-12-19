@@ -152,10 +152,15 @@ function lua.resolve_game(luaB_auxwrap)
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
         gadgets = gadget_table.raspberry_cube.gadgets
     elseif game_name == "Aibeya" then
-        print("[+] Game identified as Aibeya/B/G")
+        print("[+] Game identified as Aibeya/G")
         eboot_addrofs = gadget_table.aibeya.eboot_addrofs
         libc_addrofs = gadget_table.aibeya.libc_addrofs
         gadgets = gadget_table.aibeya.gadgets
+    elseif game_name == "B" then
+        print("[+] Game identified as B")
+        eboot_addrofs = gadget_table.b.eboot_addrofs
+        libc_addrofs = gadget_table.b.libc_addrofs
+        gadgets = gadget_table.b.gadgets
     elseif game_name == "HamidashiCreative" then
         print("[+] Game identified as Hamidashi Creative")
         eboot_addrofs = gadget_table.hamidashi_creative.eboot_addrofs
