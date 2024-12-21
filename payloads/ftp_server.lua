@@ -124,6 +124,9 @@ function gmtime_s(timep, result)
 end
 
 -- freebsd sdk and ps4-payload-sdk
+AF_INET = 2
+SOCK_STREAM = 1
+INADDR_ANY = 0
 SCE_NET_SO_REUSEADDR = 0x00000004 -- allow local address reuse
 SCE_NET_SOL_SOCKET = 0xFFFF
 
