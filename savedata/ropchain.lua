@@ -459,15 +459,9 @@ function ropchain:create_branch(value_address, op, compare_value)
 
     local jump_table = memory.alloc(0x10)
 
-    if gadgets["cmp [rcx], eax; ret"] then
-        self:push_set_rcx(value_address)
-        self:push_set_rax(compare_value)
-        self:push(gadgets["cmp [rcx], eax; ret"])
-    else
-        self:push_set_rax(value_address)
-        self:push_set_rbx(compare_value)
-        self:push(gadgets["cmp [rax], ebx; ret"])
-    end
+    self:push_set_rax(value_address)
+    self:push_set_rbx(compare_value)
+    self:push(gadgets["cmp [rax], ebx; ret"])
 
     self:push_set_rax(0)
 

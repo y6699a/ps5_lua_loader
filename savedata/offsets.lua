@@ -41,8 +41,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a12eb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2dcc59,
-            ["cmp [rax], eax; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e86a8,
             ["sete al; ret"] = 0x538c7,
             ["setne al; ret"] = 0x556,
             ["seta al; ret"] = 0x166fce,
@@ -124,8 +123,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a82cb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x303609,
-            ["cmp [rax], eax; ret"] = 0x44ef72,
+            ["cmp [rax], ebx; ret"] = 0x40ec68,
             ["sete al; ret"] = 0x55747,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16dbce,
@@ -207,11 +205,10 @@ gadget_table = {
             ["add [rbx], ecx; ret"] = nil,
             ["add [rbx], edi; ret"] = 0x3eb1d3,
             ["mov rax, [rax]; ret"] = 0x1fcdb,
-            ["inc [rax]; ret"] = 0x1a694b,
+            ["inc dword [rax]; ret"] = 0x1a694b,
             
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = nil,
-            ["cmp [rax], eax; ret"] = 0x27ab95,
+            ["cmp [rax], ebx; ret"] = 0x3ed708,
             ["sete al; ret"] = 0x52d27,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16c67e,
@@ -296,7 +293,6 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a0acb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = nil,
             ["cmp [rax], ebx; ret"] = 0x3cbb08,
             ["sete al; ret"] = 0x51367,
             ["setne al; ret"] = 0x4bf,
@@ -380,8 +376,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a0d0b,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2db4d9,
-            ["cmp [rax], ebx; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e6f28,
             ["sete al; ret"] = 0x53307,
             ["setne al; ret"] = 0x556,
             ["seta al; ret"] = 0x1669ee,
@@ -465,8 +460,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x18ecbb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2d2d79,
-            ["cmp [rax], ebx; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e5358,
             ["sete al; ret"] = 0x55bc5,
             ["setne al; ret"] = 0x1c58e,
             ["seta al; ret"] = 0x16187e,
@@ -549,8 +543,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x198dbb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2f93a9,
-            ["cmp [rax], eax; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x40ae28,
             ["sete al; ret"] = 0x5e635,
             ["setne al; ret"] = 0x1e39e,
             ["seta al; ret"] = 0x16af0e,
@@ -633,8 +626,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a84bb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x303ca9,
-            ["cmp [rax], eax; ret"] = 0x44f6fe,
+            ["cmp [rax], ebx; ret"] = 0x40f308,
             ["sete al; ret"] = 0x55787,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16ddbe,
