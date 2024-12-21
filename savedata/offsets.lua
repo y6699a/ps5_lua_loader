@@ -189,7 +189,7 @@ gadget_table = {
             ["pop rsi; ret"] = 0x10d92d,
             ["pop r8; ret"] = 0x9f1,
             ["mov r9, rbx; call [rax + 8]"] = nil,
-            ["pop r13 ; pop r14 ; pop r15 ; ret"] = 0x1150f3,
+            ["pop r13; pop r14; pop r15; ret"] = 0x1150f3,
             ["mov r9, r13; call [rax + 8]"] = 0x13b504,
             
             ["mov [rax + 8], rcx; ret"] = 0x13b48a,
@@ -274,7 +274,7 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd77d,
             ["pop r8; ret"] = 0x991,
             ["mov r9, rbx; call [rax + 8]"] = nil,
-            ["pop r13 ; pop r14 ; pop r15 ; ret"] = 0x141fc7,
+            ["pop r13; pop r14; pop r15; ret"] = 0x141fc7,
             ["mov r9, r13; call [rax + 8]"] = 0x136970,
             
             ["mov [rax + 8], rcx; ret"] = 0x1368da,

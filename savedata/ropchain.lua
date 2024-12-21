@@ -217,7 +217,7 @@ function ropchain:push_set_r9(v)
         set_r9_gadget = gadgets["mov r9, rbx; call [rax + 8]"]
     else
         self:push_set_rax(self.recover_from_call)
-        self:push(gadgets["pop r13 ; pop r14 ; pop r15 ; ret"])
+        self:push(gadgets["pop r13; pop r14; pop r15; ret"])
         self:push(v)
         set_r9_gadget = gadgets["mov r9, r13; call [rax + 8]"]
     end
