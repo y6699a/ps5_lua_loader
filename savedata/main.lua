@@ -95,6 +95,7 @@ function remote_lua_loader(port)
     local addrlen = memory.alloc(8)
     local tmp = memory.alloc(8)
 
+    local command_magic = 0xffffffff
     local maxsize = 500 * 1024  -- 500kb
     local buf = memory.alloc(maxsize)
 
@@ -175,6 +176,25 @@ function remote_lua_loader(port)
                 run_lua_code(lua_code, client_fd)
                 syscall.close(client_fd)
             end
+        elseif size == command_magic then
+            local command_tmp = memory.alloc(4)
+            syscall.read(client_fd, command_tmp, 1)
+            local command = memory.read_dword(command_tmp):tonumber()
+            
+            if command == 0 then
+                options.run_payload_in_new_thread = false
+                local msg = "command: Disabled running payload in thread option"
+                syscall.write(client_fd, msg, #msg)
+            elseif command == 1 then
+                options.run_payload_in_new_thread = true
+                local msg = "command: Enabled running payload in thread option"
+                syscall.write(client_fd, msg, #msg)
+            else
+                local err = string.format("error: invalid command %d\n", command)
+                syscall.write(client_fd, err, #err)
+            end
+            
+            syscall.close(client_fd)
         else
             local err = string.format("error: lua code exceed maxsize " ..
                 "(given %s maxsize %s)\n", hex(size), hex(maxsize))
@@ -204,7 +224,6 @@ function main()
     syscall.resolve({
         read = 3,
         write = 4,
-        open = 5,
         close = 6,
         accept = 30,
         socket = 97,

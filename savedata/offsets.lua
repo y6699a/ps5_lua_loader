@@ -2,6 +2,7 @@
 games_identification = {
     [0xbb0] = "RaspberryCube",
     [0xb90] = "Aibeya",
+    [0x170] = "B",
     [0x420] = "HamidashiCreative",
     [0x5d0] = "AikagiKimiIsshoniPack",
     [0x280] = "C",
@@ -40,8 +41,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a12eb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2dcc59,
-            ["cmp [rax], eax; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e86a8,
             ["sete al; ret"] = 0x538c7,
             ["setne al; ret"] = 0x556,
             ["seta al; ret"] = 0x166fce,
@@ -123,8 +123,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a82cb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x303609,
-            ["cmp [rax], eax; ret"] = 0x44ef72,
+            ["cmp [rax], ebx; ret"] = 0x40ec68,
             ["sete al; ret"] = 0x55747,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16dbce,
@@ -176,6 +175,91 @@ gadget_table = {
             scePthreadMutexUnlock = 0x1e8,
         }
     },
+    b = {
+        gadgets = {    
+            ["ret"] = 0x4c,
+            
+            ["pop rsp; ret"] = 0xa02,
+            ["pop rbp; ret"] = 0x79,
+            ["pop rax; ret"] = 0x9f2,
+            ["pop rbx; ret"] = 0x5d436,
+            ["pop rcx; ret"] = 0x143af,
+            ["pop rdx; ret"] = 0x3d20e7,
+            ["pop rdi; ret"] = 0xcd77e,
+            ["pop rsi; ret"] = 0x10d92d,
+            ["pop r8; ret"] = 0x9f1,
+            ["mov r9, rbx; call [rax + 8]"] = nil,
+            ["pop r13; pop r14; pop r15; ret"] = 0x1150f3,
+            ["mov r9, r13; call [rax + 8]"] = 0x13b504,
+            
+            ["mov [rax + 8], rcx; ret"] = 0x13b48a,
+            ["mov [rax + 0x28], rdx; ret"] = 0x14e21f,
+            ["mov [rcx + 0xa0], rdi; ret"] = 0xd6a8e,
+            ["mov r9, [rax + rsi + 0x18]; xor eax, eax; mov [r8], r9; ret"] = 0x11bea2,
+            ["add rax, r8; ret"] = 0xa083,
+            
+            ["mov [rdi], rsi; ret"] = 0xd6c4f,
+            ["mov [rdi], rax; ret"] = 0x95bbb,
+            ["mov [rdi], eax; ret"] = 0x95bbc,
+            ["add [rbx], eax; ret"] = nil,
+            ["add [rbx], ecx; ret"] = nil,
+            ["add [rbx], edi; ret"] = 0x3eb1d3,
+            ["mov rax, [rax]; ret"] = 0x1fcdb,
+            ["inc dword [rax]; ret"] = 0x1a694b,
+            
+            -- branching specific gadgets
+            ["cmp [rax], ebx; ret"] = 0x3ed708,
+            ["sete al; ret"] = 0x52d27,
+            ["setne al; ret"] = 0x50f,
+            ["seta al; ret"] = 0x16c67e,
+            ["setb al; ret"] = 0x5d4b4,
+            ["setg al; ret"] = nil,
+            ["setl al; ret"] = 0xd103a,
+            ["shl rax, cl; ret"] = 0xdb312,
+            ["add rax, rcx; ret"] = 0x3582e,
+            
+            stack_pivot = {
+                ["mov esp, 0xfb0000bd; ret"] = 0x39b744, -- crash handler
+                ["mov esp, 0xf00000b9; ret"] = 0x3a148c, -- native handler
+            }
+        },
+        eboot_addrofs = {
+            fake_string = 0x600164, -- SCE_RELRO segment, use ptr as size for fake string
+            luaB_auxwrap = 0x1ad170, -- to resolve eboot base
+            longjmp_import = 0x619160, -- to resolve libc base
+            
+            luaL_optinteger = 0x1aaba0,
+            luaL_checklstring = 0x1aa790,
+            lua_pushlstring = 0x1a88b0,
+            lua_pushinteger = 0x1a8890,
+            
+            luaL_newstate = 0x1abab0,
+            luaL_openlibs = 0x1b5b00,
+            lua_setfield = 0x1a9370,
+            luaL_loadstring = 0x1aba40,
+            lua_pcall = 0x1a9a00,
+            lua_pushcclosure = 0x1a8ac0,
+            lua_tolstring = 0x1a7fc0,
+            lua_pushstring = 0x1a8910,
+        },
+        libc_addrofs = {
+            calloc = 0x4e910,
+            memcpy = 0x44150,
+            setjmp = 0xb35f0,
+            longjmp = 0xb3640,
+            strerror = 0x38340,
+            error = 0x168,
+            sceKernelGetModuleInfoFromAddr = 0x198,
+            gettimeofday_import = 0x11ba28, -- syscall wrapper
+            
+            Thrd_join = 0x4dd20,
+            Thrd_exit = 0x4dda0,
+            Thrd_create = 0x4df20,
+
+            scePthreadMutexLock = 0x1d8,
+            scePthreadMutexUnlock = 0x1e8,
+        }
+    },
     hamidashi_creative = {
         gadgets = {    
             ["ret"] = 0x42,
@@ -190,7 +274,7 @@ gadget_table = {
             ["pop rsi; ret"] = 0xd77d,
             ["pop r8; ret"] = 0x991,
             ["mov r9, rbx; call [rax + 8]"] = nil,
-            ["pop r13 ; pop r14 ; pop r15 ; ret"] = 0x141fc7,
+            ["pop r13; pop r14; pop r15; ret"] = 0x141fc7,
             ["mov r9, r13; call [rax + 8]"] = 0x136970,
             
             ["mov [rax + 8], rcx; ret"] = 0x1368da,
@@ -209,7 +293,6 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a0acb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = nil,
             ["cmp [rax], ebx; ret"] = 0x3cbb08,
             ["sete al; ret"] = 0x51367,
             ["setne al; ret"] = 0x4bf,
@@ -234,6 +317,15 @@ gadget_table = {
             luaL_checklstring = 0x1a4970,
             lua_pushlstring = 0x1a2a50,
             lua_pushinteger = 0x1a2a30,
+            
+            luaL_newstate = 0x1a5d40,
+            luaL_openlibs = 0x1afdf0,
+            lua_setfield = 0x1a3530,
+            luaL_loadstring = 0x1a5cd0,
+            lua_pcall = 0x1a3bc0,
+            lua_pushcclosure = 0x1a2c60,
+            lua_tolstring = 0x1a21b0,
+            lua_pushstring = 0x1a2ab0,
         },
         libc_addrofs = {
             calloc = 0x4cdb0,
@@ -244,6 +336,13 @@ gadget_table = {
             error = 0x168,
             sceKernelGetModuleInfoFromAddr = 0x198,
             gettimeofday_import = 0x1179a8, -- syscall wrapper
+
+            Thrd_join = 0x4c1c0,
+            Thrd_exit = 0x4c240,
+            Thrd_create = 0x4c3c0,
+
+            scePthreadMutexLock = 0x1d8,
+            scePthreadMutexUnlock = 0x1e8,
         }
     },
     aikagi_kimi_isshoni_pack = {
@@ -277,8 +376,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a0d0b,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2db4d9,
-            ["cmp [rax], ebx; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e6f28,
             ["sete al; ret"] = 0x53307,
             ["setne al; ret"] = 0x556,
             ["seta al; ret"] = 0x1669ee,
@@ -302,6 +400,15 @@ gadget_table = {
             luaL_checklstring = 0x1a4ba0,
             lua_pushlstring = 0x1a2ca0,
             lua_pushinteger = 0x1a2c80,
+            
+            luaL_newstate = 0x1a5ef0,
+            luaL_openlibs = 0x1b0100,
+            lua_setfield = 0x1a3760,
+            luaL_loadstring = 0x1a5e80,
+            lua_pcall = 0x1a3e00,
+            lua_pushcclosure = 0x1a2eb0,
+            lua_tolstring = 0x1a23b0,
+            lua_pushstring = 0x1a2d00,
         },
         libc_addrofs = {
             calloc = 0x58a50,
@@ -312,6 +419,13 @@ gadget_table = {
             error = 0x178,
             sceKernelGetModuleInfoFromAddr = 0x1a8,
             gettimeofday_import = 0x11c010, -- syscall wrapper
+
+            Thrd_join = 0x57ed0,
+            Thrd_exit = 0x57f50,
+            Thrd_create = 0x58060,
+
+            scePthreadMutexLock = 0x1e8,
+            scePthreadMutexUnlock = 0x1f8,
         }
     },
     -- not supporting new mov r9, consider dropping
@@ -346,8 +460,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x18ecbb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2d2d79,
-            ["cmp [rax], ebx; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x3e5358,
             ["sete al; ret"] = 0x55bc5,
             ["setne al; ret"] = 0x1c58e,
             ["seta al; ret"] = 0x16187e,
@@ -371,6 +484,15 @@ gadget_table = {
             luaL_checklstring = 0x1928b0,
             lua_pushlstring = 0x190a20,
             lua_pushinteger = 0x190a00,
+            
+            luaL_newstate = 0x193bd0,
+            luaL_openlibs = 0x19ce50,
+            lua_setfield = 0x1914f0,
+            luaL_loadstring = 0x193b60,
+            lua_pcall = 0x191b80,
+            lua_pushcclosure = 0x190c30,
+            lua_tolstring = 0x190220,
+            lua_pushstring = 0x190a80,
         },
         libc_addrofs = {
             calloc = 0x5e2e0,
@@ -381,6 +503,13 @@ gadget_table = {
             error = 0x148,
             sceKernelGetModuleInfoFromAddr = 0x548,
             gettimeofday_import = 0xdbd60, -- syscall wrapper
+
+            Thrd_join = 0x5da90,
+            Thrd_exit = 0x5db10,
+            Thrd_create = 0x5dc20,
+
+            scePthreadMutexLock = 0x1b8,
+            scePthreadMutexUnlock = 0x1c8,
         }
     },
     e = {
@@ -414,8 +543,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x198dbb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x2f93a9,
-            ["cmp [rax], eax; ret"] = nil,
+            ["cmp [rax], ebx; ret"] = 0x40ae28,
             ["sete al; ret"] = 0x5e635,
             ["setne al; ret"] = 0x1e39e,
             ["seta al; ret"] = 0x16af0e,
@@ -439,6 +567,15 @@ gadget_table = {
             luaL_checklstring = 0x19cc00,
             lua_pushlstring = 0x19ad00,
             lua_pushinteger = 0x19ace0,
+            
+            luaL_newstate = 0x19df60,
+            luaL_openlibs = 0x1a7960,
+            lua_setfield = 0x19b7c0,
+            luaL_loadstring = 0x19def0,
+            lua_pcall = 0x19be60,
+            lua_pushcclosure = 0x19af10,
+            lua_tolstring = 0x19a440,
+            lua_pushstring = 0x19ad60,
         },
         libc_addrofs = {
             calloc = 0x22090,
@@ -449,6 +586,13 @@ gadget_table = {
             error = 0x138,
             sceKernelGetModuleInfoFromAddr = 0x568,
             gettimeofday_import = 0xefd10, -- syscall wrapper
+
+            Thrd_join = 0x21520,
+            Thrd_exit = 0x215a0,
+            Thrd_create = 0x216b0,
+
+            scePthreadMutexLock = 0x248,
+            scePthreadMutexUnlock = 0x258,
         }
     },
     f = {
@@ -482,8 +626,7 @@ gadget_table = {
             ["inc dword [rax]; ret"] = 0x1a84bb,
 
             -- branching specific gadgets
-            ["cmp [rcx], eax; ret"] = 0x303ca9,
-            ["cmp [rax], eax; ret"] = 0x44f6fe,
+            ["cmp [rax], ebx; ret"] = 0x40f308,
             ["sete al; ret"] = 0x55787,
             ["setne al; ret"] = 0x50f,
             ["seta al; ret"] = 0x16ddbe,
@@ -507,6 +650,15 @@ gadget_table = {
             luaL_checklstring = 0x1ac360,
             lua_pushlstring = 0x1aa450,
             lua_pushinteger = 0x1aa430,
+            
+            luaL_newstate = 0x1ad6a0,
+            luaL_openlibs = 0x1b7870,
+            lua_setfield = 0x1aaf20,
+            luaL_loadstring = 0x1ad630,
+            lua_pcall = 0x1ab5c0,
+            lua_pushcclosure = 0x1aa660,
+            lua_tolstring = 0x1a9b60,
+            lua_pushstring = 0x1aa4b0,
         },
         libc_addrofs = {
             calloc = 0x57e00,
@@ -517,6 +669,13 @@ gadget_table = {
             error = 0x168,
             sceKernelGetModuleInfoFromAddr = 0x198,
             gettimeofday_import = 0x204060, -- syscall wrapper
+
+            Thrd_join = 0x57260,
+            Thrd_exit = 0x572e0,
+            Thrd_create = 0x573f0,
+
+            scePthreadMutexLock = 0x1d8,
+            scePthreadMutexUnlock = 0x1e8,
         }
     },
 }

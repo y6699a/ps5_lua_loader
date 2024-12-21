@@ -210,6 +210,7 @@ function run_lua_code_in_new_thread(lua_code, opt)
         print(err)
         if opt.client_fd then
             syscall.write(opt.client_fd, err, #err)
+            syscall.close(opt.client_fd)
         end
         return
     end

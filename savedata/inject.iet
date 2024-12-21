@@ -3,7 +3,7 @@
 [save file="save9999.dat"]
 [lua]
 function include_lua()
-	e:include(e:var("s.savepath").."/inject.lua")
+	e:include(e:var("s.savepath").."/main.lua")
 end
 [/lua]
 

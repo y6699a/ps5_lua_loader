@@ -100,7 +100,7 @@ function native.setup_cmd_handler(pivot_handler)
 
     -- todo: setting hardcoded offset like this is bad. improve this
     local stack_offset = -0x78
-    if game_name == "HamidashiCreative" then
+    if game_name == "HamidashiCreative" or game_name == "B" then
         stack_offset = -0x68
     end
 
@@ -195,12 +195,12 @@ function native.fcall_with_rax(fn_addr, rax, rdi, rsi, rdx, rcx, r8, r9)
         native_cmd.fcall,
         uint64(fn_addr):tonumber(),
         uint64(rax or 0):tonumber(),
-        ropchain.resolve_value(rdi or 0):tonumber(),
-        ropchain.resolve_value(rsi or 0):tonumber(),
-        ropchain.resolve_value(rdx or 0):tonumber(),
-        ropchain.resolve_value(rcx or 0):tonumber(),
-        ropchain.resolve_value(r8 or 0):tonumber(),
-        ropchain.resolve_value(r9 or 0):tonumber()
+        lua.resolve_value(rdi or 0):tonumber(),
+        lua.resolve_value(rsi or 0):tonumber(),
+        lua.resolve_value(rdx or 0):tonumber(),
+        lua.resolve_value(rcx or 0):tonumber(),
+        lua.resolve_value(r8 or 0):tonumber(),
+        lua.resolve_value(r9 or 0):tonumber()
     ))
 end
 
@@ -213,8 +213,8 @@ function native.read_buffer(addr, size)
     return native_invoke(
         native_cmd_handler,
         native_cmd.read_buffer,
-        ropchain.resolve_value(addr):tonumber(),
-        ropchain.resolve_value(size):tonumber()
+        lua.resolve_value(addr):tonumber(),
+        lua.resolve_value(size):tonumber()
     )
 end
 
@@ -223,7 +223,7 @@ function native.write_buffer(addr, buf)
     native_invoke(
         native_cmd_handler,
         native_cmd.write_buffer,
-        ropchain.resolve_value(addr):tonumber(),
+        lua.resolve_value(addr):tonumber(),
         buf
     )
 end

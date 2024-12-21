@@ -131,17 +131,6 @@ function ropchain:increment_stack()
     return rsp
 end
 
-function ropchain.resolve_value(v)
-    if type(v) == "string" then
-        return lua.addrof(v)+24
-    elseif type(v) == "number" then
-        return uint64(v)
-    elseif is_uint64(v) then
-        return v
-    end
-    errorf("ropchain.resolve_value: invalid type (%s)", type(v))
-end
-
 function ropchain:push(v)
 
     if self.finalized then
@@ -151,7 +140,7 @@ function ropchain:push(v)
     if self.enable_mock_push then
         self:increment_stack()
     else
-        memory.write_qword(self:increment_stack(), ropchain.resolve_value(v))
+        memory.write_qword(self:increment_stack(), lua.resolve_value(v))
     end
 end
 
@@ -228,7 +217,7 @@ function ropchain:push_set_r9(v)
         set_r9_gadget = gadgets["mov r9, rbx; call [rax + 8]"]
     else
         self:push_set_rax(self.recover_from_call)
-        self:push(gadgets["pop r13 ; pop r14 ; pop r15 ; ret"])
+        self:push(gadgets["pop r13; pop r14; pop r15; ret"])
         self:push(v)
         set_r9_gadget = gadgets["mov r9, r13; call [rax + 8]"]
     end
@@ -470,15 +459,9 @@ function ropchain:create_branch(value_address, op, compare_value)
 
     local jump_table = memory.alloc(0x10)
 
-    if gadgets["cmp [rcx], eax; ret"] then
-        self:push_set_rcx(value_address)
-        self:push_set_rax(compare_value)
-        self:push(gadgets["cmp [rcx], eax; ret"])
-    else
-        self:push_set_rax(value_address)
-        self:push_set_rbx(compare_value)
-        self:push(gadgets["cmp [rax], ebx; ret"])
-    end
+    self:push_set_rax(value_address)
+    self:push_set_rbx(compare_value)
+    self:push(gadgets["cmp [rax], ebx; ret"])
 
     self:push_set_rax(0)
 
@@ -621,12 +604,12 @@ function fcall:__call(rdi, rsi, rdx, rcx, r8, r9)
         local arg_addr = fcall.arg_addr
         memory.write_qword(arg_addr.fn_addr, self.fn_addr)
         memory.write_qword(arg_addr.syscall_no, self.syscall_no or 0)
-        memory.write_qword(arg_addr.rdi, ropchain.resolve_value(rdi or 0))
-        memory.write_qword(arg_addr.rsi, ropchain.resolve_value(rsi or 0))
-        memory.write_qword(arg_addr.rdx, ropchain.resolve_value(rdx or 0))
-        memory.write_qword(arg_addr.rcx, ropchain.resolve_value(rcx or 0))
-        memory.write_qword(arg_addr.r8, ropchain.resolve_value(r8 or 0))
-        memory.write_qword(arg_addr.r9, ropchain.resolve_value(r9 or 0))
+        memory.write_qword(arg_addr.rdi, lua.resolve_value(rdi or 0))
+        memory.write_qword(arg_addr.rsi, lua.resolve_value(rsi or 0))
+        memory.write_qword(arg_addr.rdx, lua.resolve_value(rdx or 0))
+        memory.write_qword(arg_addr.rcx, lua.resolve_value(rcx or 0))
+        memory.write_qword(arg_addr.r8, lua.resolve_value(r8 or 0))
+        memory.write_qword(arg_addr.r9, lua.resolve_value(r9 or 0))
         return fcall.chain:execute_through_coroutine()
     end
 end

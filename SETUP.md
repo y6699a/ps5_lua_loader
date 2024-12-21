@@ -4,7 +4,7 @@
 1. Play the game for a while until you can create save data
 2. Use Apollo Save Tool to export decrypted save data to USB drive
 3. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_{YOUR_GAME_CUSA_ID}_savedata), overwriting currently existing save data
-4. Make sure that `PLATFORM` variable on top of `inject.lua` is set appropriately
+4. Make sure that `PLATFORM` variable on top of `main.lua` is set appropriately
 5. Use Apollo Save Tool to import the new save data from USB drive
 6. Run the game and check if there is a popup from lua loader
 7. Use `send_lua.py` to send lua file to the loader
@@ -25,7 +25,7 @@ If you have a jailbroken PS5 with a non activated account, you can use [OffAct](
 3. Play the game for a while until you can create save data.
 4. Connect a USB disk to the PS4.
 5. Use Apollo Save Tool to export decrypted save data to USB drive.
-6. Make sure that `PLATFORM` variable on top of `inject.lua` is set appropriately
+6. Make sure that `PLATFORM` variable on top of `main.lua` is set appropriately
 7. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_{YOUR_GAME_CUSA_ID}_savedata), overwriting currently existing save data.
 8. Create new fake offline account.
 9. Use Apollo Save Tool to activate the new fake account using the converted hex account ID from step 2.
