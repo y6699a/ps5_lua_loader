@@ -1,6 +1,7 @@
 import sys
 import socket
 import struct
+import argparse
 
 signals = {
     4: "SIGILL",
@@ -8,14 +9,17 @@ signals = {
     11: "SIGSEGV",
 }
 
+COMMAND_MAGIC = struct.pack('<Q', 0xFFFFFFFF)  # Command magic value in byte form (0xFFFFFFFF)
 MAGIC_VALUE = struct.pack('<Q', 0x13371337)  # Magic value in byte form (0x13371337)
 MAGIC_VALUE_LEN = len(MAGIC_VALUE)
 SIGNAL_LEN = 16
 MCONTEXT_LEN = 0x100
 
+DISABLE_THREAD = 0
+ENABLE_THREAD = 1
+
 
 def print_mcontext(buffer):
-    
     # mcontext_t structure
     fmt = "<QQQQQQQQQQQQQQQQIHHQIHHQQQQQQ"
     
@@ -41,9 +45,16 @@ def print_mcontext(buffer):
         ))
     print()
 
-
+def send_command(ip, port, command):    
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:        
+        sock.connect((ip, int(port)))
+        
+        sock.sendall(COMMAND_MAGIC + struct.pack("B", command))
+        
+        buffer = sock.recv(4096)
+        print(buffer.decode("utf-8"), end="")
+        
 def send_payload(ip, port, filepath):
-    
     data = open(filepath, "rb").read()
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:        
@@ -104,12 +115,25 @@ def send_payload(ip, port, filepath):
                 buffer = b""
 
 def main():
-    if len(sys.argv) != 4:
-        print("{} <ps-ip> <port> <filepath>".format(sys.argv[0]))
-        return
-
-    ip, port, filepath = sys.argv[1:]
-    send_payload(ip, port, filepath)
+    parser = argparse.ArgumentParser(description='Send payload to specified target')
+    group = parser.add_mutually_exclusive_group()
+    
+    parser.add_argument('ip', help='Target IP address')
+    parser.add_argument('port', type=int, help='Target port number')
+    group.add_argument('filepath', nargs='?', help='Path to the payload file')
+    group.add_argument('--enable-thread', action='store_true', 
+                        help='Enable threading for payload execution')
+    group.add_argument('--disable-thread', action='store_true', 
+                        help='Disable threading for payload execution')
+    
+    args = parser.parse_args()
+    
+    if args.disable_thread:
+        send_command(args.ip, args.port, DISABLE_THREAD)
+    elif args.enable_thread:
+        send_command(args.ip, args.port, ENABLE_THREAD)
+    else:
+        send_payload(args.ip, args.port, args.filepath)
 
 if __name__ == "__main__":
     main()
