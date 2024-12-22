@@ -1,3 +1,7 @@
+syscall.resolve({
+    open = 5
+})
+
 function sceKernelSendNotificationRequest(text)
     local O_WRONLY = 1
     local notify_buffer_size = 0xc30
