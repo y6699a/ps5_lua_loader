@@ -5,7 +5,7 @@ FW_VERSION = nil
 options = {
     enable_signal_handler = true,
     run_loader_with_gc_disabled = true,
-    run_payload_in_new_thread = true,
+    run_payload_in_new_thread = false,
 }
 
 WRITABLE_PATH = "/av_contents/content_tmp/"

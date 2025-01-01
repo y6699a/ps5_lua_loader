@@ -37,7 +37,12 @@ end
 function test_runtime_error()
 
     local lua_code = [[
-        tbl.notexist()
+
+        function main()
+            tbl.notexist()
+        end
+
+        main()
     ]]
 
     local thr = run_lua_code_in_new_thread(lua_code, {
@@ -54,7 +59,7 @@ function test_write_from_thread()
     local lua_code = [[
 
         function main()
-            sleep(5)
+            sleep(1)
             memory.write_qword(args.addr, 0x1337)
         end
 
@@ -71,8 +76,43 @@ function test_write_from_thread()
     print()
     print("before write from new thread: " .. hex(memory.read_qword(mem)))
     print("sleeping for few seconds before checking again...")
-    sleep(6)
+    sleep(2)
     print("after write from new thread: " .. hex(memory.read_qword(mem)))
+end
+
+function test_high_contentions()
+
+    local lua_code = [[
+
+        function main()
+            for i=1,0x10 do
+                memory.increment_atomic_qword(args.number)
+            end
+        end
+
+        main()
+    ]]
+
+    local thr_count = 4 -- high chance to crash with large value
+    local thr_list = {}
+
+    local number = memory.alloc(8)
+
+    for i=1,thr_count do
+        local thr = run_lua_code_in_new_thread(lua_code, {
+            client_fd = client_fd,
+            args = {
+                number = number,
+            }
+        })
+        table.insert(thr_list, thr)
+    end
+
+    for i,thr in ipairs(thr_list) do
+        thr:join()
+    end
+
+    print("number = " .. hex(memory.read_dword(number)))
 end
 
 function main()
@@ -80,6 +120,7 @@ function main()
     -- test_syntax_error()
     -- test_runtime_error()
     test_write_from_thread()
+    -- test_high_contentions()
 end
 
 main()
