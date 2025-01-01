@@ -262,11 +262,11 @@ gadget_table = {
             Thrd_exit = 0x4dda0,
             Thrd_create = 0x4df20,
 
-            Mtx_init = nil,
-            Mtx_lock = nil,
-            Mtx_unlock = nil,
+            Mtx_init = 0x4e1a0,
+            Mtx_lock = 0x4e230,
+            Mtx_unlock = 0x4e220,
 
-            Atomic_fetch_add_8 = nil,
+            Atomic_fetch_add_8 = 0x39800,
         }
     },
     hamidashi_creative = {
