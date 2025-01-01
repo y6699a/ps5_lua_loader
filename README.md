@@ -17,6 +17,7 @@ This repo provides few [payloads](payloads/) for you to play around. PRs for use
 
 ## Credits
 
+* excellent blog [post](https://memorycorruption.net/posts/rce-lua-factorio/) where most of the ideas of lua primitives are taken from 
 * flatz - for sharing ideas and lua implementations
 * null_ptr - for testing & ideas
 * gezine - for sharing the vulnerable games & ideas
