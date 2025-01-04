@@ -17,6 +17,8 @@ MCONTEXT_LEN = 0x100
 
 DISABLE_THREAD = 0
 ENABLE_THREAD = 1
+DISABLE_SIGNAL_HANDLER = 2
+ENABLE_SIGNAL_HANDLER = 3
 
 
 def print_mcontext(buffer):
@@ -125,6 +127,10 @@ def main():
                         help='Enable threading for payload execution')
     group.add_argument('--disable-thread', action='store_true', 
                         help='Disable threading for payload execution')
+    group.add_argument('--enable-signal-handler', action='store_true', 
+                    help='Enable signal handler (print info in case of crash)')
+    group.add_argument('--disable-signal-handler', action='store_true', 
+                        help='Disable signal handler (print info in case of crash)')
     
     args = parser.parse_args()
     
@@ -132,6 +138,10 @@ def main():
         send_command(args.ip, args.port, DISABLE_THREAD)
     elif args.enable_thread:
         send_command(args.ip, args.port, ENABLE_THREAD)
+    elif args.disable_signal_handler:
+        send_command(args.ip, args.port, DISABLE_SIGNAL_HANDLER)
+    elif args.enable_signal_handler:
+        send_command(args.ip, args.port, ENABLE_SIGNAL_HANDLER)
     else:
         send_payload(args.ip, args.port, args.filepath)
 

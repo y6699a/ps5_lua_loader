@@ -4,8 +4,8 @@ FW_VERSION = nil
 
 options = {
     enable_signal_handler = true,
-    run_loader_with_gc_disabled = true,
     run_payload_in_new_thread = false,
+    run_loader_with_gc_disabled = true,
 }
 
 WRITABLE_PATH = "/av_contents/content_tmp/"
@@ -189,6 +189,16 @@ function remote_lua_loader(port)
                 options.run_payload_in_new_thread = true
                 local msg = "command: Enabled running payload in thread option"
                 syscall.write(client_fd, msg, #msg)
+            elseif command == 2 then
+                signal.clear()
+                options.enable_signal_handler = false
+                local msg = "command: Disabled signal handler"
+                syscall.write(client_fd, msg, #msg)
+            elseif command == 3 then
+                signal.register()
+                options.enable_signal_handler = true
+                local msg = "command: Enabled signal handler"
+                syscall.write(client_fd, msg, #msg)
             else
                 local err = string.format("error: invalid command %d\n", command)
                 syscall.write(client_fd, err, #err)
@@ -215,7 +225,7 @@ function main()
     syscall.init()
     print("[+] syscall initialized")
 
-    native.init()
+    native.register()
     print("[+] native handler registered")
 
     print("[+] arbitrary r/w primitives achieved")
@@ -237,7 +247,7 @@ function main()
 
     -- setup signal handler
     if options.enable_signal_handler then
-        signal.init()
+        signal.register()
         print("[+] signal handler registered")
     end
 

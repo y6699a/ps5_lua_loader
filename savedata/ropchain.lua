@@ -328,7 +328,7 @@ function ropchain:push_increment_atomic_qword(addr)
 end
 
 function ropchain:push_decrement_atomic_qword(addr)
-    self:push_add_atomic_qword(addr, 1)
+    self:push_add_atomic_qword(addr, -1)
 end
 
 function ropchain:push_write_dword_memory(addr, v)
@@ -498,13 +498,16 @@ function ropchain:create_branch(value_address, op, compare_value)
     return jump_table
 end
 
--- gen "if-statement" style code 
+-- gen "if statement" style code 
 function ropchain:gen_conditional(value_address, op, compare_value, callback)
 
     local jump_table = self:create_branch(value_address, op, compare_value)
     
-    local jmp_cond_true = self:get_rsp()
-    callback()
+    -- if memory[value_address] <op> compare_value then
+        local jmp_cond_true = self:get_rsp()
+        callback()
+    -- end
+
     local jmp_cond_false = self:get_rsp()
 
     memory.write_multiple_qwords(jump_table, {
@@ -513,25 +516,24 @@ function ropchain:gen_conditional(value_address, op, compare_value, callback)
     })
 end
 
--- gen "do while" style loop
+-- gen "while statement" style loop
 function ropchain:gen_loop(value_address, op, compare_value, callback)
 
-    -- {
-    local jmp_cond_true = self:get_rsp()
-    callback()
-    -- } while (memory[value_address] <op> compare_value])
+    local loopback = self:get_rsp()
     local jump_table = self:create_branch(value_address, op, compare_value)
-    local jmp_cond_false = self:get_rsp()
     
+    -- while memory[value_address] <op> compare_value do
+        local jmp_cond_true = self:get_rsp()
+        callback()
+        self:push_set_rsp(loopback)
+    -- end
+   
+    local jmp_cond_false = self:get_rsp()
+
     memory.write_multiple_qwords(jump_table, {
         jmp_cond_false, -- comparison false
         jmp_cond_true, -- comparison true
     })
-end
-
--- spin until comparison is false
-function ropchain:gen_spinlock(value_address, op, compare_value)
-    self:gen_loop(value_address, op, compare_value, function() end)
 end
 
 function ropchain:restore_through_longjmp(jmpbuf)

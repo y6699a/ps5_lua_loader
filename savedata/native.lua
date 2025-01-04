@@ -7,7 +7,7 @@ native_cmd = {
 
 native = {}
 
-function native.init()
+function native.register()
 
     local pivot_handler = gadgets.stack_pivot[2]
     native.pivot_handler_rop = native.setup_pivot_handler(pivot_handler)
@@ -157,7 +157,7 @@ function native.setup_pivot_handler(pivot_handler)
 
     syscall_mmap(pivot_handler.pivot_base, 0x2000)
 
-    -- non modifying chains
+    -- non modifying chains before fn call
     local push_fcall_with_hole = function(chain, fn_addr, ...)
         chain:push_sysv(...)
         chain:align_stack()
