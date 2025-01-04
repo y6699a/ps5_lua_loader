@@ -89,8 +89,11 @@ gadget_table = {
             Thrd_exit = 0x57f50,
             Thrd_create = 0x58060,
 
-            scePthreadMutexLock = 0x1e8,
-            scePthreadMutexUnlock = 0x1f8,
+            Mtx_init = 0x582e0,
+            Mtx_lock = 0x58370,
+            Mtx_unlock = 0x58360,
+
+            Atomic_fetch_add_8 = 0x44240,
         }
     },
     aibeya = {
@@ -171,8 +174,11 @@ gadget_table = {
             Thrd_exit = 0x572e0,
             Thrd_create = 0x573f0,
 
-            scePthreadMutexLock = 0x1d8,
-            scePthreadMutexUnlock = 0x1e8,
+            Mtx_init = 0x57670,
+            Mtx_lock = 0x57700,
+            Mtx_unlock = 0x576F0,
+
+            Atomic_fetch_add_8 = 0x43900,
         }
     },
     b = {
@@ -256,8 +262,11 @@ gadget_table = {
             Thrd_exit = 0x4dda0,
             Thrd_create = 0x4df20,
 
-            scePthreadMutexLock = 0x1d8,
-            scePthreadMutexUnlock = 0x1e8,
+            Mtx_init = 0x4e1a0,
+            Mtx_lock = 0x4e230,
+            Mtx_unlock = 0x4e220,
+
+            Atomic_fetch_add_8 = 0x39800,
         }
     },
     hamidashi_creative = {
@@ -341,8 +350,11 @@ gadget_table = {
             Thrd_exit = 0x4c240,
             Thrd_create = 0x4c3c0,
 
-            scePthreadMutexLock = 0x1d8,
-            scePthreadMutexUnlock = 0x1e8,
+            Mtx_init = 0x4c650,
+            Mtx_lock = 0x4c6f0,
+            Mtx_unlock = 0x4c6e0,
+
+            Atomic_fetch_add_8 = 0x37bf0,
         }
     },
     aikagi_kimi_isshoni_pack = {
@@ -424,13 +436,16 @@ gadget_table = {
             Thrd_exit = 0x57f50,
             Thrd_create = 0x58060,
 
-            scePthreadMutexLock = 0x1e8,
-            scePthreadMutexUnlock = 0x1f8,
+            Mtx_init = 0x582e0,
+            Mtx_lock = 0x58370,
+            Mtx_unlock = 0x58360,
+
+            Atomic_fetch_add_8 = 0x44240,
         }
     },
     -- not supporting new mov r9, consider dropping
     c = {
-        gadgets = {    
+        gadgets = {
             ["ret"] = 0x4c,
 
             ["pop rsp; ret"] = 0x972,
@@ -508,8 +523,11 @@ gadget_table = {
             Thrd_exit = 0x5db10,
             Thrd_create = 0x5dc20,
 
-            scePthreadMutexLock = 0x1b8,
-            scePthreadMutexUnlock = 0x1c8,
+            Mtx_init = 0x43cf0,
+            Mtx_lock = 0x43e10,
+            Mtx_unlock = 0x43db0,
+
+            Atomic_fetch_add_8 = 0x4a340,
         }
     },
     e = {
@@ -591,8 +609,11 @@ gadget_table = {
             Thrd_exit = 0x215a0,
             Thrd_create = 0x216b0,
 
-            scePthreadMutexLock = 0x248,
-            scePthreadMutexUnlock = 0x258,
+            Mtx_init = 0x21940,
+            Mtx_lock = 0x219d0,
+            Mtx_unlock = 0x219c0,
+
+            Atomic_fetch_add_8 = 0xe0c0,
         }
     },
     f = {
@@ -674,8 +695,11 @@ gadget_table = {
             Thrd_exit = 0x572e0,
             Thrd_create = 0x573f0,
 
-            scePthreadMutexLock = 0x1d8,
-            scePthreadMutexUnlock = 0x1e8,
+            Mtx_init = 0x57670,
+            Mtx_lock = 0x57700,
+            Mtx_unlock = 0x576f0,
+
+            Atomic_fetch_add_8 = 0x43900,
         }
     },
 }

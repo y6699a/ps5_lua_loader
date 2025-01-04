@@ -13,7 +13,7 @@ function thread.init()
     local fpu_ctrl_value = memory.read_dword(jmpbuf_backup + 0x40)
     local mxcsr_value = memory.read_dword(jmpbuf_backup + 0x44)
 
-    thread.tid_addr = memory.alloc(0x8)
+    thread.thr_handle_addr = memory.alloc(0x8)
     thread.jmpbuf = memory.alloc(0x60)
 
     memory.write_qword(thread.jmpbuf, gadgets["ret"]) -- ret addr
@@ -21,47 +21,24 @@ function thread.init()
     memory.write_dword(thread.jmpbuf + 0x44, mxcsr_value) -- mxcsr
 end
 
---
--- thread.run can accept any of the following
---   1) ropchain object
---   2) syscall (eq syscall.write) with parameters
---   3) function addr with parameters
---
-function thread.run(obj, ...)
+function thread.run(chain)
     
     local Thrd_create = fcall(libc_addrofs.Thrd_create)
     
     local self = setmetatable({}, thread)
 
-    local chain = nil
-    if obj.stack_base then
-        chain = obj
-    else
-        chain = ropchain({
-            fcall_stub_padding_size = 0x50000
-        })
-        if obj.syscall_no then
-            chain:push_syscall_with_ret(obj, ...)
-        else
-            chain:push_fcall_with_ret(obj, ...)
-        end
-    end
-
-    -- exit the thread and return retval from last fn invocation
-    chain:push_fcall_raw(libc_addrofs.Thrd_exit, function()
-        local last_retval = chain.retval_addr[#chain.retval_addr]
-        chain:push_set_reg_from_memory("rdi", last_retval)
-    end)
+    -- exit the thread after it has finished
+    chain:push_fcall(libc_addrofs.Thrd_exit)
 
     memory.write_qword(thread.jmpbuf+0x10, chain.stack_base) -- rsp - pivot to our ropchain
 
-    memory.write_qword(thread.tid_addr, 0)
-    local ret = Thrd_create(thread.tid_addr, libc_addrofs.longjmp, thread.jmpbuf):tonumber()
+    -- create new thread with longjmp as entry, which then will jmp to our ropchain
+    local ret = Thrd_create(thread.thr_handle_addr, libc_addrofs.longjmp, thread.jmpbuf):tonumber()
     if ret ~= 0 then
         error("Thrd_create() error: " .. hex(ret))
     end
 
-    self.tid = memory.read_qword(thread.tid_addr)
+    self.thr_handle = memory.read_qword(thread.thr_handle_addr)
     self.chain = chain
     return self
 end
@@ -69,22 +46,19 @@ end
 function thread:join()
 
     local Thrd_join = fcall(libc_addrofs.Thrd_join)
-    local ret_value = memory.alloc(0x8)
 
     -- will block until thread finish
-    local ret = Thrd_join(self.tid, ret_value):tonumber()
+    local ret = Thrd_join(self.thr_handle, 0):tonumber()
     if ret ~= 0 then
         error("Thrd_join() error: " .. hex(ret))
     end
-
-    return memory.read_qword(ret_value)
 end
 
 --
 -- opt = {
---    client_fd -- output sink fd for new thread
---    args -- additional data (table) to be passed to new thread
---    close_socket_after_finished -- if thread should close client_fd after it has finished running
+--    args = additional data (table) to be passed to new thread
+--    client_fd = output sink fd for new thread
+--    close_socket_after_finished = if thread should close client_fd after it has finished running
 -- }
 function run_lua_code_in_new_thread(lua_code, opt)
 
@@ -104,7 +78,7 @@ function run_lua_code_in_new_thread(lua_code, opt)
     local lua_pushstring = fcall(eboot_addrofs.lua_pushstring)
     local lua_pushinteger = fcall(eboot_addrofs.lua_pushinteger)
 
-    local prologue = [[
+    local lua_runner = [[
 
         package.path = package.path .. ";/savedata0/?.lua"
         
@@ -140,7 +114,7 @@ function run_lua_code_in_new_thread(lua_code, opt)
                 _G[k] = v
             end
 
-            -- copy resolved syscall from loader
+            -- copy (existing) resolved syscall from loader
             for k,v in pairs(syscall_tbl) do
                 if v.fn_addr and v.syscall_no then
                     syscall[k] = fcall(v.fn_addr, v.syscall_no)
@@ -162,17 +136,35 @@ function run_lua_code_in_new_thread(lua_code, opt)
         old_print = print
         function print(...)
             local out = prepare_arguments(...) .. "\n"
+            old_print(out)  -- print to stdout
             if client_fd then
                 syscall.write(client_fd, out, #out)
             end
         end
+
+        function _run_payload()
+
+            local script, err = loadstring(_lua_code)
+            if err then
+                print(err)
+                return
+            end
+
+            -- note: calling `debug.traceback` will crash the game. no stacktrace sucks :<
+            -- local ok, err = xpcall(main, function(err)
+            --     return debug.traceback(err, 2)
+            -- end)
+
+            local ok, err = pcall(script)
+            if err then
+                print(err)
+            end
+        end
+
+        _run_payload()
     ]]
 
-    local epilogue = [[
-        -- nothing for now
-    ]]
-
-    local _data_from_loader = {
+    local data_from_loader = {
         gadgets = gadgets,
         eboot_addrofs = eboot_addrofs,
         libc_addrofs = libc_addrofs,
@@ -186,9 +178,8 @@ function run_lua_code_in_new_thread(lua_code, opt)
         native_pivot_handler_rop = native.pivot_handler_rop,
         args = opt.args,
         client_fd = opt.client_fd,
+        _lua_code = lua_code,
     }
-
-    local finalized_lua_code = string.format("%s\n%s\n%s", prologue, lua_code, epilogue)
 
     local pivot_handler = gadgets.stack_pivot[2]
 
@@ -201,16 +192,18 @@ function run_lua_code_in_new_thread(lua_code, opt)
     lua_pushcclosure(L, pivot_handler.gadget_addr, 1);
     lua_setfield(L, LUA_GLOBALSINDEX, "native_invoke");
 
-    lua_pushstring(L, serialize(_data_from_loader))
+    lua_pushstring(L, serialize(data_from_loader))
     lua_setfield(L, LUA_GLOBALSINDEX, "_data_from_loader");
 
-    local ret = luaL_loadstring(L, finalized_lua_code):tonumber()
+    local ret = luaL_loadstring(L, lua_runner):tonumber()
     if ret ~= 0 then
         local err = memory.read_null_terminated_string(lua_tolstring(L, -1, 0))
         print(err)
         if opt.client_fd then
             syscall.write(opt.client_fd, err, #err)
-            syscall.close(opt.client_fd)
+            if opt.close_socket_after_finished then
+                syscall.close(opt.client_fd)
+            end
         end
         return
     end
@@ -223,35 +216,11 @@ function run_lua_code_in_new_thread(lua_code, opt)
     chain:push_fcall_with_ret(eboot_addrofs.lua_pcall, L, 0, LUA_MULTRET, 0)
 
     if opt.client_fd then
-
-        local jmp_table = chain:create_branch(chain.retval_addr[1], "~=", 0)
-        local true_target = chain:get_rsp()
-
-        -- if lua_pcall(L, 0, LUA_MULTRET, 0) ~= LUA_OK then
-            local string_len = memory.alloc(0x8)
-            chain:push_fcall_with_ret(eboot_addrofs.lua_tolstring, L, -1, string_len)
-
-            -- print error to client
-            chain:push_syscall_raw(syscall.write, function ()
-                chain:push_set_reg_from_memory("rdx", string_len)
-                chain:push_set_reg_from_memory("rsi", chain.retval_addr[2])
-                chain:push_set_rdi(opt.client_fd)
-            end)
-        -- end
-
-        local false_target = chain:get_rsp()
-        
-        memory.write_multiple_qwords(jmp_table, {
-            false_target, -- comparison false
-            true_target, -- comparison true
-        })
-
         if opt.close_socket_after_finished then
             chain:push_syscall(syscall.close, opt.client_fd)
         end
     end
 
     -- run rop in new thread
-    local thr = thread.run(chain)
-    return thr
+    return thread.run(chain)
 end
