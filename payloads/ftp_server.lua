@@ -153,33 +153,9 @@ function TIMESPEC_TV_SEC() return 0 end
 function TIMESPEC_TV_NANO() return 0x8 end
 -- freebsd sdk ![end]
 
-function sceKernelSendNotificationRequest(text)
-    local O_WRONLY = 1
-    local notify_buffer_size = 0xc30
-    local notify_buffer = memory.alloc(notify_buffer_size)
-    local icon_uri = "cxml://psnotification/tex_icon_system"
-
-    -- credits to OSM-Made for this one. @ https://github.com/OSM-Made/PS4-Notify
-    memory.write_dword(notify_buffer + 0, 0)                -- type
-    memory.write_dword(notify_buffer + 0x28, 0)             -- unk3
-    memory.write_dword(notify_buffer + 0x2C, 1)             -- use_icon_image_uri
-    memory.write_dword(notify_buffer + 0x10, -1)            -- target_id
-    memory.write_buffer(notify_buffer + 0x2D, text .. "\0") -- message
-    memory.write_buffer(notify_buffer + 0x42D, icon_uri)    -- uri
-
-    local notification_fd = syscall.open("/dev/notification0", O_WRONLY):tonumber()
-    if notification_fd < 0 then
-        error("open() error: " .. get_error_string())
-    end
-
-    syscall.write(notification_fd, notify_buffer, notify_buffer_size)
-
-    syscall.close(notification_fd)
-end
-
 function sceKernelSendDebug(text)
     if FTP_DEBUG_MSG == "on" then
-        sceKernelSendNotificationRequest(text)
+        send_ps_notification(text)
     end
 end
 
@@ -523,7 +499,7 @@ function ftp_send_pasv()
     sceNetGetsockname(ftp.client.data_sockfd, picked, namelen)
 
     local port = read_u16(picked + 2)
-    --sceKernelSendNotificationRequest("Port: " .. port)
+    --send_ps_notification("Port: " .. port)
 
     local cmd = string.format("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n", a, b, c, d, bit32.bor(bit32.rshift(port, 0), 0xFF), bit32.bor(bit32.rshift(port, 8), 0xFF))
     ftp_send_ctrl_msg(cmd)
@@ -923,7 +899,7 @@ local function cleanup_ftp()
     if ftp.client.data_sockfd then sceClose(ftp.client.data_sockfd) end
     if ftp.client.pasv_sockfd then sceClose(ftp.client.pasv_sockfd) end
     if ftp.server.server_sockfd then sceClose(ftp.server.server_sockfd) end
-    sceKernelSendNotificationRequest("FTP Server closed")
+    send_ps_notification("FTP Server closed")
 end
 
 function ftp_client_th()
@@ -985,7 +961,7 @@ function ftp_init()
         return
     end
 
-    sceKernelSendNotificationRequest("FTP Server listening on port " .. ftp.server.port)
+    send_ps_notification("FTP Server listening on port " .. ftp.server.port)
 
     while true do
         if not ftp.client.is_connected then

@@ -234,8 +234,10 @@ function main()
     syscall.resolve({
         read = 3,
         write = 4,
+        open = 5,
         close = 6,
         accept = 30,
+        pipe = 42,
         socket = 97,
         bind = 104,
         setsockopt = 105,
@@ -243,6 +245,7 @@ function main()
         sysctl = 202,
         nanosleep = 240,
         sigaction = 416,
+        mmap = 477,
     })
 
     -- setup signal handler

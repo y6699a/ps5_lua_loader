@@ -33,7 +33,7 @@ function hex(v)
     elseif type(v) == "number" then
         return string.format("0x%x", v)
     else
-        errorf("hex: unknown type (%s)", type(v))
+        errorf("hex: unknown type (%s) for value %s", type(v), tostring(v))
     end
 end
 
@@ -48,13 +48,17 @@ function uint64:new(v)
     elseif type(v) == "string" then
         if v:sub(1, 2):lower() == "0x" then  -- init from hexstring
             v = v:sub(3):gsub("^0+", ""):upper()
-            assert(#v <= 16, string.format("uint64:new: hex string too long for uint64 (%s)", v))
+            if #v > 16 then
+                errorf("uint64:new: hex string too long for uint64 (%s)", v)
+            end
             v = string.rep("0", 16 - #v) .. v  -- pad with leading zeros
             self.h = tonumber(v:sub(1, 8), 16) or 0
             self.l = tonumber(v:sub(9, 16), 16) or 0
         else
             local num = tonumber(v)  -- assume its normal number
-            assert(num, string.format("uint64:new: invalid decimal string for uint64 (%s)", v))
+            if not num then
+                errorf("uint64:new: invalid decimal string for uint64 (%s)", v)
+            end
             self.h, self.l = math.floor(num / 2^32), num % 2^32
         end
     else
@@ -78,27 +82,20 @@ function uint64:tonumber()
 end
 
 function uint64:pack()
-    return string.char(
-        self.l % 256,
-        bit32.rshift(self.l, 8) % 256,
-        bit32.rshift(self.l, 16) % 256,
-        bit32.rshift(self.l, 24) % 256,
-        self.h % 256,
-        bit32.rshift(self.h, 8) % 256,
-        bit32.rshift(self.h, 16) % 256,
-        bit32.rshift(self.h, 24) % 256
-    )
+    return struct.pack("<I", self.l) .. struct.pack("<I", self.h)
 end
 
 function uint64.unpack(str)
-    if not (type(str) == "string" and #str == 8 or #str == 4) then
-        error("uint64.unpack: input string must be 8 or 4 length size")
+    if type(str) ~= "string" or #str > 8 then
+        error("uint64.unpack: input string must be 8 bytes length or lower")
     end
-    local l = str:byte(1) + bit32.lshift(str:byte(2), 8) 
-        + bit32.lshift(str:byte(3), 16) + bit32.lshift(str:byte(4), 24)
-    local h = #str == 8 and (str:byte(5) + bit32.lshift(str:byte(6), 8) 
-        + bit32.lshift(str:byte(7), 16) + bit32.lshift(str:byte(8), 24)) or 0
-    return uint64({h = h, l = l})
+    if #str < 8 then
+        str = str .. string.rep('\0', 8 - #str)
+    end
+    return uint64({
+        h = struct.unpack("<I", str:sub(5,8)),
+        l = struct.unpack("<I", str:sub(1,4))
+    })
 end
 
 -- note: comparison ops only work if both are same type
@@ -142,7 +139,9 @@ end
 
 function uint64:divmod(v)
     v = uint64(v)
-    if v.h == 0 and v.l == 0 then error("division by zero") end
+    if v.h == 0 and v.l == 0 then
+        error("division by zero")
+    end
     local q, r = uint64(0), uint64(0)
     for i = 63, 0, -1 do
         r = r:lshift(1)

@@ -28,6 +28,16 @@ function memory.read_buffer(addr, size)
     end
 end
 
+function memory.read_byte(addr)
+    local value = memory.read_buffer(addr, 1)
+    return value and #value == 1 and uint64.unpack(value) or nil 
+end
+
+function memory.read_word(addr)
+    local value = memory.read_buffer(addr, 2)
+    return value and #value == 2 and uint64.unpack(value) or nil 
+end
+
 function memory.read_dword(addr)
     local value = memory.read_buffer(addr, 4)
     return value and #value == 4 and uint64.unpack(value) or nil 
@@ -106,5 +116,33 @@ function memory.read_null_terminated_string(addr)
         result = result .. chunk
         addr = addr + #chunk
     end
+    return result
+end
+
+function memory.check_access(addr, check_size)
+
+    if not memory.pipe_initialized then
+        local read_fd, write_fd = create_pipe()
+        memory.pipe_read_fd = read_fd
+        memory.pipe_write_fd = write_fd
+        memory.pipe_buf = memory.alloc(0x1000)
+        memory.pipe_initialized = true 
+    end
+
+    check_size = check_size or 1
+
+    local actual_write_size = syscall.write(memory.pipe_write_fd, addr, check_size):tonumber()
+    local result = actual_write_size == check_size
+    if not result then
+        return false
+    end
+
+    if actual_write_size > 1 then
+        local actual_read_size = syscall.read(memory.pipe_read_fd, memory.pipe_buf, check_size):tonumber()
+        if actual_read_size ~= actual_write_size then
+            return false
+        end
+    end
+
     return result
 end

