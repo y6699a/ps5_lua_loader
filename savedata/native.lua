@@ -155,7 +155,7 @@ function native.setup_pivot_handler(pivot_handler)
 
     local Mtx_init = fcall(libc_addrofs.Mtx_init)
 
-    syscall_mmap(pivot_handler.pivot_base, 0x2000)
+    map_fixed_address(pivot_handler.pivot_base, 0x2000)
 
     -- non modifying chains before fn call
     local push_fcall_with_hole = function(chain, fn_addr, ...)

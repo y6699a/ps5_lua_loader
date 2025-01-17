@@ -182,7 +182,7 @@ gadget_table = {
         }
     },
     b = {
-        gadgets = {    
+        gadgets = {
             ["ret"] = 0x4c,
             
             ["pop rsp; ret"] = 0xa02,

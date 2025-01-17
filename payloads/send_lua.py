@@ -54,7 +54,7 @@ def send_command(ip, port, command):
         sock.sendall(COMMAND_MAGIC + struct.pack("B", command))
         
         buffer = sock.recv(4096)
-        print(buffer.decode("utf-8"), end="")
+        print(buffer.decode("latin-1"), end="")
         
 def send_payload(ip, port, filepath):
     data = open(filepath, "rb").read()
@@ -104,7 +104,7 @@ def send_payload(ip, port, filepath):
                 crash_code = signals.get(crash_code_data, f"Unknown signal code {crash_code_data}")
                 crash_address = f"0x{crash_address_data:016x}"
 
-                print(buffer[:magic_index].decode("utf-8"))
+                print(buffer[:magic_index].decode("latin-1"))
                 print(f"{crash_code} at {crash_address}")
                 print_mcontext(mcontext_data)
                 
@@ -113,7 +113,7 @@ def send_payload(ip, port, filepath):
             # print leftover data if they are not part of signal handling
             magic_index = buffer.find(MAGIC_VALUE)
             if magic_index == -1:
-                print(buffer.decode("utf-8"), end="")
+                print(buffer.decode("latin-1"), end="")
                 buffer = b""
 
 def main():
