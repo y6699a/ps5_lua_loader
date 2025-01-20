@@ -242,6 +242,8 @@ function main()
     native.register()
     print("[+] native handler registered")
 
+    do_lua_fixup() -- makes gc happy
+
     print("[+] arbitrary r/w primitives achieved")
 
     -- resolve required syscalls for remote lua loader 
@@ -271,8 +273,6 @@ function main()
     FW_VERSION = get_version()
 
     thread.init()
-
-    do_lua_fixup() -- makes gc happy
 
     local run_loader = function()
         local port = 9026
