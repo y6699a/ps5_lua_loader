@@ -5,7 +5,7 @@ FW_VERSION = nil
 options = {
     enable_signal_handler = true,
     run_payload_in_new_thread = false,
-    run_loader_with_gc_disabled = true,
+    run_loader_with_gc_disabled = false,
 }
 
 WRITABLE_PATH = "/av_contents/content_tmp/"
@@ -216,6 +216,20 @@ function remote_lua_loader(port)
     syscall.close(sock_fd)
 end
 
+
+function do_lua_fixup()
+
+    lua.fake_str_addr = nil
+
+    local prev_native_invoke_addr = lua.addrof(native_invoke)
+
+    local new_native_invoke = memory.alloc(8*5)
+    memory.memcpy(new_native_invoke, prev_native_invoke_addr, 8*5)
+    
+    native_invoke = lua.fakeobj(new_native_invoke, lua_types.LUA_TFUNCTION)
+end
+
+
 function main()
 
     -- setup limited read & write primitives
@@ -257,6 +271,8 @@ function main()
     FW_VERSION = get_version()
 
     thread.init()
+
+    do_lua_fixup() -- makes gc happy
 
     local run_loader = function()
         local port = 9026

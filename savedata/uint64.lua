@@ -144,13 +144,13 @@ function uint64:divmod(v)
     end
     local q, r = uint64(0), uint64(0)
     for i = 63, 0, -1 do
-        r = r:lshift(1)
+        r = bit64.lshift(r, 1)
         if bit32.rshift(self.h, i % 32) % 2 == 1 or (i < 32 and bit32.rshift(self.l, i) % 2 == 1) then
             r = r + 1
         end
         if r >= v then
             r = r - v
-            q = q + uint64(1):lshift(i)
+            q = q + bit64.lshift(1, i)
         end
     end
     return q, r
@@ -159,51 +159,97 @@ end
 function uint64:__div(v) return select(1, self:divmod(v)) end
 function uint64:__mod(v) return select(2, self:divmod(v)) end
 
-function uint64:lshift(n)
-    if n >= 64 then return uint64(0) end
-    if n >= 32 then
-        return uint64({h = bit32.lshift(self.l, n - 32), l = 0})
+
+--
+-- bitwise operations for uint64 class
+--
+
+bit64 = {}
+
+function bit64.lshift(x, s_amount)
+    
+    x = uint64(x)
+
+    if s_amount >= 64 then
+        return uint64(0)
+    elseif s_amount >= 32 then
+        return uint64({h = bit32.lshift(x.l, s_amount - 32), l = 0})
     else
-        local h = bit32.bor(bit32.lshift(self.h, n), bit32.rshift(self.l, 32 - n))
-        local l = bit32.lshift(self.l, n)
+        local h = bit32.bor(bit32.lshift(x.h, s_amount), bit32.rshift(x.l, 32 - s_amount))
+        local l = bit32.lshift(x.l, s_amount)
         return uint64({h = h, l = l})
     end
 end
 
-function uint64:rshift(n)
-    if n >= 64 then return uint64(0) end
-    if n >= 32 then
-        return uint64({h = 0, l = bit32.rshift(self.h, n - 32)})
+function bit64.rshift(x, s_amount)
+
+    x = uint64(x)
+
+    if s_amount >= 64 then
+        return uint64(0)
+    elseif s_amount >= 32 then
+        return uint64({h = 0, l = bit32.rshift(x.h, s_amount - 32)})
     else
-        local h = bit32.rshift(self.h, n)
-        local l = bit32.bor(bit32.rshift(self.l, n), bit32.lshift(self.h % (2^n), 32 - n))
+        local h = bit32.rshift(x.h, s_amount)
+        local l = bit32.bor(bit32.rshift(x.l, s_amount), bit32.lshift(x.h % (2^s_amount), 32 - s_amount))
         return uint64({h = h, l = l})
     end
 end
 
-function uint64:bxor(v)
-    v = uint64(v)
-    local h = bit32.bxor(self.h, v.h)
-    local l = bit32.bxor(self.l, v.l)
-    return uint64({h = h, l = l})
+function bit64.bxor(...)
+
+    local args = {...}
+    local result = uint64(args[1]) or 0
+
+    for i = 2, #args do
+        local x = uint64(args[i])
+        result = uint64({
+            h = bit32.bxor(result.h, x.h),
+            l = bit32.bxor(result.l, x.l)
+        })
+    end
+
+    return result
 end
 
-function uint64:band(v)
-    v = uint64(v)
-    local h = bit32.band(self.h, v.h)
-    local l = bit32.band(self.l, v.l)
-    return uint64({h = h, l = l})
+function bit64.band(...)
+
+    local args = {...}
+    local result = uint64(args[1]) or 0
+
+    for i = 2, #args do
+        local x = uint64(args[i])
+        result = uint64({
+            h = bit32.band(result.h, x.h),
+            l = bit32.band(result.l, x.l)
+        })
+    end
+
+    return result
 end
 
-function uint64:bor(v)
-    v = uint64(v)
-    local h = bit32.bor(self.h, v.h)
-    local l = bit32.bor(self.l, v.l)
-    return uint64({h = h, l = l})
+function bit64.bor(...)
+
+    local args = {...}
+    local result = uint64(args[1]) or 0
+
+    for i = 2, #args do
+        local x = uint64(args[i])
+        result = uint64({
+            h = bit32.bor(result.h, x.h),
+            l = bit32.bor(result.l, x.l)
+        })
+    end
+
+    return result
 end
 
-function uint64:bnot()
-    local h = bit32.bnot(self.h)
-    local l = bit32.bnot(self.l)
-    return uint64({h = h, l = l})
+function bit64.bnot(x)
+    
+    x = uint64(x)
+
+    return uint64({
+        h = bit32.bnot(x.h),
+        l = bit32.bnot(x.l)
+    })
 end

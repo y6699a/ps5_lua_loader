@@ -108,7 +108,7 @@ end
 function memory.read_null_terminated_string(addr)
     local result = ""
     while true do
-        local chunk = memory.read_buffer(addr, 0x50)
+        local chunk = memory.read_buffer(addr, 0x8)
         local null_pos = chunk:find("\0")
         if null_pos then 
             return result .. chunk:sub(1, null_pos - 1)

@@ -90,7 +90,9 @@ end
 function dump_table(o, depth, indent)
     depth = depth or 2
     indent = indent or 0
-    if depth < 1 then return tostring(o) end
+    if depth < 1 then
+        return string.format("%q", tostring(o))
+    end
     local function get_indent(level)
         return string.rep("  ", level)
     end
@@ -156,7 +158,9 @@ end
 
 function resolve_base(initial_addr, modname, max_page_search)
 
-    local initial_page = initial_addr:band(uint64(0xfff):bnot())
+    max_page_search = max_page_search or 5
+
+    local initial_page = bit64.band(initial_addr, bit64.bnot(0xfff))
     local page_size = 0x1000
 
     for i=0, max_page_search-1 do

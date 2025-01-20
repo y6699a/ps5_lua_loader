@@ -9,11 +9,9 @@ syscall = {}
 
 function syscall.init()
 
-    libkernel_base = resolve_base(
-        memory.read_qword(libc_addrofs.gettimeofday_import),
-        "libkernel.sprx", 5
-    )
-
+    local addr_inside_libkernel = memory.read_qword(libc_addrofs.gettimeofday_import)
+    
+    libkernel_base = resolve_base(addr_inside_libkernel, "libkernel.sprx")
     print("[+] libkernel base @ " .. hex(libkernel_base))
     
     if PLATFORM == "ps4" then  -- ps4 requires valid syscall wrapper, which we can scrape from libkernel .text
