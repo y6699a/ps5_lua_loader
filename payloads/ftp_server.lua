@@ -926,10 +926,6 @@ end
 function ftp_init()
     get_offsets(game_name)
 
-    local f = io.open("/av_contents/content_tmp/ftp.txt", "w")
-    f:write("file created by ftp server.")
-    f:close()
-
     ftp.client.cur_path = ftp.client.root_path
     ftp.server.server_sockfd = sceNetSocket(AF_INET, SOCK_STREAM, 0)
     if ftp.server.server_sockfd < 0 then

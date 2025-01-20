@@ -23,5 +23,6 @@ This repo provides few [payloads](payloads/) for you to play around. PRs for use
 * gezine - for sharing the vulnerable games & ideas
 * specter & chendo - for webkit implementations which i refer a lot
 * al-azif - parts and information grabbed from his sdk, aswell as from his ftp server
+* horror - for the notification popup and ftp server payloads
 * everyone else who shared their knowledge with the community
 
