@@ -1,19 +1,21 @@
 
 Use `send_lua.py` to communicate with the loader
 
+Examples: `$ python send_lua.py 192.168.1.2 9026 hello_world.lua`
+
 ### Payloads
 
 1. `hello_world.lua` - Prints basic information back from the game process - its process id, the base of the eboot, libc and libkernel.
-2. `sigsegv_crash_trigger.lua` - Triggers two SIGSEGV crashes in succession that should be signal handled without crashing the game process.
-3. `notification_popup.lua` - Triggers a notification popup with 'Hello World' on the PlayStation.
-4. `sigbus_crash_trigger.lua` - Triggers a SIGBUS crash that should be signal handled without crashing the game process.
-5. `streaming_output.lua` - Prints basic information and trigger two SIGSEGV crashes in the middle, to demonstrate how streaming real-time output works.
-6. `ftp_server.lua` - Runs an FTP server on port 1337 that allows browsing the filesystem as seen by the game process (e.g. limited filesystem), and also upload and download files.
-7. `threading_test.lua` - Provides examples on how to run lua code in new threads.
+2. `ftp_server.lua` - Runs an FTP server on port 1337 that allows browsing the filesystem as seen by the game process, and also upload and download files. If the game process is jailbroken, it can view more files on the filesystem. 
 
-To verify concurrent (thread) execution: First, run `threading_test.lua` which simulates a long-running task. Then, from a separate window, immediately run any test payload (#1-#5). The second payload should complete without being blocked by the first task.
- 
-### Commands
+### Payloads after jailbroken game process
 
-1. `--disable-thread` - Disables the option to run payloads in a new thread.
-2. `--enable-thread` - Enables the option to run payloads in a new thread.
+1. `kdata_dumper.lua` - Dump content of kernel .data segments over network (NOTE: you must modify the IP address before you run this payload)
+2. `read_klog.lua` - Read content of `/dev/klog` to user.
+
+### send_lua.py additional commands
+
+* `--disable-thread` - Disables the option to run payloads in a new thread.
+* `--enable-thread` - Enables the option to run payloads in a new thread.
+* `--enable-signal-handler` - Enables the option to catch signals (such as crash, etc).
+* `--disable-signal-handler` - Disables the option to catch signals.

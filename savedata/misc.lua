@@ -276,7 +276,7 @@ function sleep(val, unit)
         return nanosleep(to_ns(val, unit))
     else
         if unit ~= 's' then
-            error("sleep() only support second if native exec is available")
+            error("sleep() only support second if native exec is not available")
         end
         local sec = tonumber(os.clock() + val); 
         while (os.clock() < sec) do end
@@ -285,7 +285,6 @@ end
 
 function send_ps_notification(text)
 
-    local O_WRONLY = 1
     local notify_buffer_size = 0xc30
     local notify_buffer = memory.alloc(notify_buffer_size)
     local icon_uri = "cxml://psnotification/tex_icon_system"
@@ -341,13 +340,7 @@ function map_fixed_address(addr, size)
         mmap = 477,
     })
 
-    local MAP_PRIVATE = 0x2
-    local MAP_FIXED = 0x10
-    local MAP_ANONYMOUS = 0x1000
     local MAP_COMBINED = bit32.bor(MAP_PRIVATE, MAP_FIXED, MAP_ANONYMOUS)
-
-    local PROT_READ = 0x1
-    local PROT_WRITE = 0x2
     local PROT_COMBINED = bit32.bor(PROT_READ, PROT_WRITE)
 
     local ret = syscall.mmap(addr, size, PROT_COMBINED, MAP_COMBINED, -1 ,0)
@@ -356,6 +349,44 @@ function map_fixed_address(addr, size)
     end
 
     return ret
+end
+
+function check_memory_access(addr, check_size)
+
+    if not memory.pipe_initialized then
+        local read_fd, write_fd = create_pipe()
+        memory.pipe_read_fd = read_fd
+        memory.pipe_write_fd = write_fd
+        memory.pipe_buf = memory.alloc(0x1000)
+        memory.pipe_initialized = true 
+    end
+
+    check_size = check_size or 1
+
+    local actual_write_size = syscall.write(memory.pipe_write_fd, addr, check_size):tonumber()
+    local result = actual_write_size == check_size
+    if not result then
+        return false
+    end
+
+    if actual_write_size > 1 then
+        local actual_read_size = syscall.read(memory.pipe_read_fd, memory.pipe_buf, check_size):tonumber()
+        if actual_read_size ~= actual_write_size then
+            return false
+        end
+    end
+
+    return result
+end
+
+function is_kernel_rw_available()
+    return kernel.rw_initialized == true
+end
+
+function is_curproc_jailbroken()
+    local cur_uid = syscall.getuid():tonumber()
+    local is_in_sandbox = syscall.is_in_sandbox():tonumber()
+    return cur_uid == 0 and is_in_sandbox == 0
 end
 
 

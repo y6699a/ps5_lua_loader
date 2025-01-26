@@ -40,7 +40,7 @@ function syscall.resolve(list)
                 if syscall.syscall_wrapper[num] then
                     syscall[name] = fcall(syscall.syscall_wrapper[num], num)
                 else
-                    printf("warning: syscall %s (%d) not found", name, num)
+                    errorf("syscall wrapper for %s (%d) not found in libkernel", name, num)
                 end
             elseif PLATFORM == "ps5" then
                 syscall[name] = fcall(syscall.syscall_address, num)

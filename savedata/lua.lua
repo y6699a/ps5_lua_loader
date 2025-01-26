@@ -129,7 +129,9 @@ function lua.setup_better_read_primitive()
     local new_fake_str_addr = eboot_addrofs.fake_string
 
     -- if current fake str is already behind eboot segment, then do nothing
-    if new_fake_str_addr > lua.fake_str_addr then return end
+    if new_fake_str_addr > lua.fake_str_addr then
+        return
+    end
 
     lua.fake_str = lua.fakeobj(new_fake_str_addr, lua_types.LUA_TSTRING)
     lua.fake_str_addr = new_fake_str_addr
@@ -319,20 +321,6 @@ function lua.read_buffer(addr, size)
     return rel_addr >= 0 and lua.fake_str:sub(rel_addr, rel_addr + size - 1) or nil 
 end
 
-function lua.read_qword(addr)
-    local value = lua.read_buffer(addr, 8)
-    return value and #value == 8 and uint64.unpack(value) or nil 
-end
-
-function lua.read_multiple_qwords(addr, count)
-    local qwords = {}
-    local buffer = lua.read_buffer(addr, count*8)
-    for i=0,(#buffer/8)-1 do
-        table.insert(qwords, uint64.unpack(buffer:sub(i*8+1, i*8+8)))
-    end
-    return qwords
-end
-
 -- write 8 bytes (double) at target address with 4 bytes corruption after addr+8
 function lua.write_double(addr, value)
     local fake_upval = ub8(0x0) .. ub8(0x0) .. ub8(addr)  -- next + tt/marked + addr to tvalue
@@ -349,9 +337,15 @@ function lua.write_qword(addr, value)
 end
 
 function lua.create_fake_cclosure(addr)
+    
     -- next + tt/marked/isC/nupvalues/hole + gclist + env + f
     local fake_cclosure = ub8(0) .. "\6\0\1\0\0\0\0\0" .. ub8(0) .. ub8(0) .. ub8(addr)
-    return lua.fakeobj(lua.resolve_value(fake_cclosure), lua_types.LUA_TFUNCTION)
+
+    -- create a copy so gc wont freed the memory backing of the object
+    local mem = memory.alloc(#fake_cclosure)
+    memory.memcpy(mem, lua.resolve_value(fake_cclosure), #fake_cclosure)
+
+    return lua.fakeobj(mem, lua_types.LUA_TFUNCTION)
 end
 
 

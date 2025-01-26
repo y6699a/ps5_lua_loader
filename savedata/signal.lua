@@ -1,13 +1,7 @@
 
 function register_signal_handler(handler_addr)
 
-    local SIGILL = 4
-    local SIGBUS = 10
-    local SIGSEGV = 11
-    
     local signals = {SIGILL, SIGBUS, SIGSEGV}
-    
-    local SA_SIGINFO = 0x4
     local sigaction_struct = memory.alloc(0x28)
     
     memory.write_qword(sigaction_struct, handler_addr) -- sigaction.sa_handler

@@ -118,31 +118,3 @@ function memory.read_null_terminated_string(addr)
     end
     return result
 end
-
-function memory.check_access(addr, check_size)
-
-    if not memory.pipe_initialized then
-        local read_fd, write_fd = create_pipe()
-        memory.pipe_read_fd = read_fd
-        memory.pipe_write_fd = write_fd
-        memory.pipe_buf = memory.alloc(0x1000)
-        memory.pipe_initialized = true 
-    end
-
-    check_size = check_size or 1
-
-    local actual_write_size = syscall.write(memory.pipe_write_fd, addr, check_size):tonumber()
-    local result = actual_write_size == check_size
-    if not result then
-        return false
-    end
-
-    if actual_write_size > 1 then
-        local actual_read_size = syscall.read(memory.pipe_read_fd, memory.pipe_buf, check_size):tonumber()
-        if actual_read_size ~= actual_write_size then
-            return false
-        end
-    end
-
-    return result
-end

