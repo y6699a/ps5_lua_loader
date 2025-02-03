@@ -16,10 +16,8 @@ MAGIC_VALUE_LEN = len(MAGIC_VALUE)
 SIGNAL_LEN = 16
 MCONTEXT_LEN = 0x100
 
-DISABLE_THREAD = 0
-ENABLE_THREAD = 1
-DISABLE_SIGNAL_HANDLER = 2
-ENABLE_SIGNAL_HANDLER = 3
+DISABLE_SIGNAL_HANDLER = 0
+ENABLE_SIGNAL_HANDLER = 1
 
 
 def print_mcontext(buffer):
@@ -134,10 +132,6 @@ def main():
     parser.add_argument('ip', help='Target IP address')
     parser.add_argument('port', type=int, help='Target port number')
     group.add_argument('filepath', nargs='?', help='Path to the payload file')
-    group.add_argument('--enable-thread', action='store_true', 
-                        help='Enable threading for payload execution')
-    group.add_argument('--disable-thread', action='store_true', 
-                        help='Disable threading for payload execution')
     group.add_argument('--enable-signal-handler', action='store_true', 
                     help='Enable signal handler (print info in case of crash)')
     group.add_argument('--disable-signal-handler', action='store_true', 
@@ -145,11 +139,7 @@ def main():
     
     args = parser.parse_args()
     
-    if args.disable_thread:
-        send_command(args.ip, args.port, DISABLE_THREAD)
-    elif args.enable_thread:
-        send_command(args.ip, args.port, ENABLE_THREAD)
-    elif args.disable_signal_handler:
+    if args.disable_signal_handler:
         send_command(args.ip, args.port, DISABLE_SIGNAL_HANDLER)
     elif args.enable_signal_handler:
         send_command(args.ip, args.port, ENABLE_SIGNAL_HANDLER)

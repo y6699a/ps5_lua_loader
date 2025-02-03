@@ -4,7 +4,6 @@ FW_VERSION = nil
 
 options = {
     enable_signal_handler = true,
-    run_payload_in_new_thread = false,
     run_loader_with_gc_disabled = false,
 }
 
@@ -52,7 +51,9 @@ require "thread"
 require "kernel_offset"
 require "kernel"
 
-function run_lua_code(lua_code, client_fd)
+function run_lua_code(lua_code)
+
+    assert(client_fd)
 
     local script, err = loadstring(lua_code)
     if err then
@@ -69,8 +70,7 @@ function run_lua_code(lua_code, client_fd)
         printf = function(fmt, ...)
             local out = string.format(fmt, ...) .. "\n"
             syscall.write(client_fd, out, #out)
-        end,
-        client_fd = client_fd,
+        end
     }
 
     setmetatable(env, { __index = _G })
@@ -131,7 +131,9 @@ function remote_lua_loader(port)
         print("[+] waiting for new connection...")
         
         memory.write_dword(addrlen, 16)
-        local client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()  
+
+        client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()  
+        
         if client_fd < 0 then
             error("accept() error: " .. get_error_string())
         end
@@ -163,34 +165,20 @@ function remote_lua_loader(port)
                 signal.set_sink_fd(client_fd)
             end
 
-            if options.run_payload_in_new_thread then
-                run_lua_code_in_new_thread(lua_code, {
-                    client_fd = client_fd,
-                    close_socket_after_finished = true,
-                })
-            else
-                run_lua_code(lua_code, client_fd)
-                syscall.close(client_fd)
-            end
+            run_lua_code(lua_code)
+            syscall.close(client_fd)
+            
         elseif size == command_magic then
             local command_tmp = memory.alloc(4)
             syscall.read(client_fd, command_tmp, 1)
             local command = memory.read_dword(command_tmp):tonumber()
             
             if command == 0 then
-                options.run_payload_in_new_thread = false
-                local msg = "command: Disabled running payload in thread option"
-                syscall.write(client_fd, msg, #msg)
-            elseif command == 1 then
-                options.run_payload_in_new_thread = true
-                local msg = "command: Enabled running payload in thread option"
-                syscall.write(client_fd, msg, #msg)
-            elseif command == 2 then
                 signal.clear()
                 options.enable_signal_handler = false
                 local msg = "command: Disabled signal handler"
                 syscall.write(client_fd, msg, #msg)
-            elseif command == 3 then
+            elseif command == 1 then
                 signal.register()
                 options.enable_signal_handler = true
                 local msg = "command: Enabled signal handler"
@@ -207,6 +195,8 @@ function remote_lua_loader(port)
             syscall.write(client_fd, err, #err)
             syscall.close(client_fd)
         end
+
+        client_fd = nil
 
         -- init kernel r/w class if exploit state exists
         if not kernel.rw_initialized then

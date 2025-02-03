@@ -365,7 +365,11 @@ function run_with_ps5_syscall_enabled(f)
 
     -- catch error so we can restore sysent
     local err = run_with_coroutine(f)
+
     if err then
+        if client_fd then
+            syscall.write(client_fd, lua.resolve_value(err), #err)
+        end
         print(err)
     end
     
