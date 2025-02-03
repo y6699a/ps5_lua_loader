@@ -21,34 +21,23 @@ function test_print()
         main()
     ]]
 
-    local thr = run_lua_code_in_new_thread(lua_code, {
-        client_fd = client_fd
-    })
-    thr:join()
+    run_lua_code_in_new_thread(lua_code, { client_fd = client_fd })
 end
 
 function test_syntax_error()
-    local thr = run_lua_code_in_new_thread("`", {
-        client_fd = client_fd
-    })
-    thr:join()
+    run_lua_code_in_new_thread("`", { client_fd = client_fd })
 end
 
 function test_runtime_error()
 
     local lua_code = [[
-
         function main()
             tbl.notexist()
         end
-
         main()
     ]]
 
-    local thr = run_lua_code_in_new_thread(lua_code, {
-        client_fd = client_fd
-    })
-    thr:join()
+    run_lua_code_in_new_thread(lua_code, { client_fd = client_fd })
 end
 
 function test_write_from_thread()
@@ -57,22 +46,21 @@ function test_write_from_thread()
     memory.write_qword(mem, 0xdead)
     
     local lua_code = [[
-
         function main()
             sleep(1)
             memory.write_qword(args.addr, 0x1337)
         end
-
         main()
     ]]
 
     local thr = run_lua_code_in_new_thread(lua_code, {
+        async = true,
         client_fd = client_fd,
         args = {
-            addr = mem  
+            addr = mem
         }
     })
-    
+
     print()
     print("before write from new thread: " .. hex(memory.read_qword(mem)))
     print("sleeping for few seconds before checking again...")
@@ -84,9 +72,11 @@ function test_high_contentions()
 
     local lua_code = [[
 
+        local Atomic_fetch_add_8 = fcall(libc_addrofs.Atomic_fetch_add_8)
+
         function main()
             for i=1,0x10 do
-                memory.increment_atomic_qword(args.number)
+                Atomic_fetch_add_8(args.number, 1)
             end
         end
 
@@ -100,6 +90,7 @@ function test_high_contentions()
 
     for i=1,thr_count do
         local thr = run_lua_code_in_new_thread(lua_code, {
+            async = true,
             client_fd = client_fd,
             args = {
                 number = number,
@@ -119,7 +110,7 @@ function main()
     test_print()
     -- test_syntax_error()
     -- test_runtime_error()
-    test_write_from_thread()
+    -- test_write_from_thread()
     -- test_high_contentions()
 end
 

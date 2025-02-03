@@ -210,23 +210,7 @@ function remote_lua_loader(port)
 
         -- init kernel r/w class if exploit state exists
         if not kernel.rw_initialized then
-
-            local state = storage.get("kernel_rw")
-            
-            if state then
-
-                kernel_offset = get_kernel_offset() 
-        
-                ipv6_kernel_rw.data = state.ipv6_kernel_rw_data
-                
-                kernel.copyout = ipv6_kernel_rw.copyout
-                kernel.copyin = ipv6_kernel_rw.copyin
-                kernel.read_buffer = ipv6_kernel_rw.read_buffer
-                kernel.write_buffer = ipv6_kernel_rw.write_buffer
-
-                kernel.addr = state.kernel_addr
-                kernel.rw_initialized = true
-            end
+            initialize_kernel_rw()
         end
 
     end
@@ -251,23 +235,27 @@ function main()
     -- resolve required syscalls for remote lua loader
     -- note: syscall resolved here will also be available in payloads
     syscall.resolve({
-        read = 3,
-        write = 4,
-        open = 5,
-        close = 6,
-        getuid = 24,
-        accept = 30,
-        pipe = 42,
-        socket = 97,
-        connect = 98,
-        bind = 104,
-        setsockopt = 105,
-        getsockopt = 118,
-        listen = 106,
-        sysctl = 202,
-        nanosleep = 240,
-        sigaction = 416,
-        is_in_sandbox = 585,
+        read = 0x3,
+        write = 0x4,
+        open = 0x5,
+        close = 0x6,
+        getuid = 0x18,
+        accept = 0x1e,
+        pipe = 0x2a,
+        socket = 0x61,
+        connect = 0x62,
+        bind = 0x68,
+        setsockopt = 0x69,
+        listen = 0x6a,
+        getsockopt = 0x76,
+        sysctl = 0xca,
+        nanosleep = 0xf0,
+        sigaction = 0x1a0,
+        thr_self = 0x1b0,
+        dlsym = 0x24f,
+        dynlib_load_prx = 0x252,
+        dynlib_unload_prx = 0x253,
+        is_in_sandbox = 0x249,
     })
 
     -- setup signal handler

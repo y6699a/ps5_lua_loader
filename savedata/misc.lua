@@ -30,6 +30,16 @@ function prepare_arguments(...)
     return s
 end
 
+function file_exists(name)
+    local f = io.open(name, "r")
+    if f ~= nil then
+        io.close(f)
+        return true
+    else
+        return false
+    end
+ end
+
 function file_write(filename, data, mode)
     local fd = io.open(filename, mode or "wb")
     fd:write(data)
@@ -48,7 +58,10 @@ function hex_dump(buf, addr)
         local hexstr = chunk:gsub('.', function(c) 
             return string.format('%02X ', string.byte(c)) 
         end)
-        local ascii = chunk:gsub('%c', '.') -- replace non-printable characters
+        local ascii = chunk:gsub('.', function(c)
+            local byte = string.byte(c)
+            return (byte >= 32 and byte <= 126) and c or '.'
+        end)
         table.insert(result, string.format('%s  %-48s %s', hex(addr+i-1), hexstr, ascii))
     end
     return table.concat(result, '\n')
@@ -379,14 +392,55 @@ function check_memory_access(addr, check_size)
     return result
 end
 
-function is_kernel_rw_available()
-    return kernel.rw_initialized == true
-end
-
-function is_curproc_jailbroken()
+function is_jailbroken()
     local cur_uid = syscall.getuid():tonumber()
     local is_in_sandbox = syscall.is_in_sandbox():tonumber()
-    return cur_uid == 0 and is_in_sandbox == 0
+    return cur_uid == 0 and is_in_sandbox == 0 and kernel.rw_initialized == true
+end
+
+function check_jailbroken()
+    if not is_jailbroken() then
+        error("process is not jailbroken")
+    end
+end
+
+function load_prx(path)
+
+    local handle_out = memory.alloc(0x4)
+
+    if syscall.dynlib_load_prx(path, 0x0, handle_out, 0x0):tonumber() ~= 0x0 then
+        error("dynlib_load_prx() error: " .. get_error_string())
+    end
+
+    return memory.read_dword(handle_out)
+end
+
+function dlsym(handle, sym)
+
+    check_jailbroken()
+    assert(type(sym) == "string")
+    
+    local addr_out = memory.alloc(0x8)
+
+    if syscall.dlsym(handle, sym, addr_out):tonumber() == -1 then
+        error("dlsym() error: " .. get_error_string())
+    end
+
+    return memory.read_qword(addr_out)
+end
+
+function get_title_id()
+
+    local sceKernelGetAppInfo_addr = dlsym(0x2001, "sceKernelGetAppInfo")
+    local sceKernelGetAppInfo = fcall(sceKernelGetAppInfo_addr)
+
+    local app_info = memory.alloc(0x100)
+
+    if sceKernelGetAppInfo(syscall.getpid(), app_info):tonumber() ~= 0 then
+        error("sceKernelGetAppInfo() error: " .. hex(ret))
+    end
+
+    return memory.read_null_terminated_string(app_info + 0x10)
 end
 
 

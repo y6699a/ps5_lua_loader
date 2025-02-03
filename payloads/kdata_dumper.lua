@@ -66,12 +66,9 @@ end
 
 function main()
 
-    if not is_kernel_rw_available() then
-        error("kernel r/w is not available")
-    end
+    check_jailbroken()
 
     dump_kdata_over_network(IP, PORT)
-
 end
 
 main()

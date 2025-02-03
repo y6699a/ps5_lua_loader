@@ -167,8 +167,7 @@ ps5_kernel_offset_list = {
     },
 }
 
-
-function get_kernel_offset()
+function get_ps5_kernel_offset()
 
     if PLATFORM ~= "ps5" then
         error("only ps5 is supported by now")

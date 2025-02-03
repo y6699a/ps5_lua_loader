@@ -40,8 +40,6 @@ function read_klog()
     FD_ZERO(readfds)
     FD_SET(klog_fd, readfds)
 
-    local cur_read = 0
-
     while true do
 
         local select_ret = syscall.select(FD_SETSIZE, readfds, nil, nil, timeval):tonumber()
@@ -54,35 +52,21 @@ function read_klog()
             break
 
         else
-            local read_size = syscall.read(klog_fd, data_mem + cur_read, data_size - cur_read):tonumber()
-            cur_read = cur_read + read_size
-
-            -- write klog data to client
-            if cur_read >= data_size then
-                syscall.write(client_fd, data_mem, cur_read)
-                cur_read = 0
-            end
+            local read_size = syscall.read(klog_fd, data_mem, data_size)
+            syscall.write(client_fd, data_mem, read_size)
         end
-    end
-
-    -- write any leftover data to client
-    if cur_read > 0 then
-        syscall.write(client_fd, data_mem, cur_read)
     end
 
     syscall.close(klog_fd)
 end
 
-
 function main()
+
+    check_jailbroken()
 
     syscall.resolve({
         select = 0x5d
     })
-
-    if not is_curproc_jailbroken() then
-        error("current process is not jailbroken")
-    end
 
     read_klog()
 end

@@ -1,4 +1,3 @@
-
 --
 -- thread class
 --
@@ -23,16 +22,29 @@ function thread.init()
     thread.initialized = true
 end
 
-function thread:new(chain)
+
+function thread:new(obj, ...)
 
     if not thread.initialized then
         thread.init()
     end
 
-    if not chain.stack_base then
-        error("`chain` argument must be a ropchain() object")
-    end
+    local chain = obj or {}
     
+    if chain.stack_base then
+        chain = obj
+    else
+        chain = ropchain({
+            fcall_stub_padding_size = 0x50000
+        })
+
+        if obj.syscall_no then
+            chain:push_syscall_with_ret(obj, ...)
+        else
+            chain:push_fcall_with_ret(obj, ...)
+        end
+    end
+
     local self = setmetatable({}, thread)
 
     -- exit the thread after it has finished
@@ -49,10 +61,12 @@ function thread:new(chain)
     return self
 end
 
-function thread:run()
+function thread:run(async)
+
+    async = async or false
 
     local Thrd_create = fcall(libc_addrofs.Thrd_create)
-    
+
     -- spawn new thread with longjmp as entry, which then will jmp to our ropchain
     local ret = Thrd_create(thread.thr_handle_addr, libc_addrofs.longjmp, self.jmpbuf):tonumber()
     
@@ -61,6 +75,10 @@ function thread:run()
     end
 
     self.thr_handle = memory.read_qword(thread.thr_handle_addr)
+
+    if not async then
+        self:join(self)
+    end
 end
 
 function thread:join()
@@ -78,12 +96,14 @@ end
 --
 -- opt = {
 --    args = additional data (table) to be passed to new thread
+--    async = run lua code asynchronously (default is false)
 --    client_fd = output sink fd for new thread
 --    close_socket_after_finished = if thread should close client_fd after it has finished running
 -- }
 function run_lua_code_in_new_thread(lua_code, opt)
 
     opt = opt or {}
+    opt.async = opt.async or false
 
     local LUA_REGISTRYINDEX = -10000
     local LUA_ENVIRONINDEX = -10001
@@ -101,8 +121,9 @@ function run_lua_code_in_new_thread(lua_code, opt)
 
     local lua_runner = [[
 
-        package.path = package.path .. ";/savedata0/?.lua"
-        
+        package.path = package.path .. ";LUA_PATH?.lua"
+
+        require "globals"
         require "misc"
         require "bit32"
         require "uint64"
@@ -113,6 +134,8 @@ function run_lua_code_in_new_thread(lua_code, opt)
         require "syscall"
         require "native"
         require "thread"
+        require "kernel_offset"
+        require "kernel"
 
         function _payload_init()
 
@@ -141,6 +164,14 @@ function run_lua_code_in_new_thread(lua_code, opt)
 
             -- enable addrof/fakeobj primitives
             lua.setup_victim_table()
+
+            storage.data = storage_data
+
+            -- init kernel r/w class if exploit state exists
+            if not kernel.rw_initialized then
+                initialize_kernel_rw()
+            end
+
         end
 
         _payload_init()
@@ -187,6 +218,7 @@ function run_lua_code_in_new_thread(lua_code, opt)
         FW_VERSION = FW_VERSION,
         game_name = game_name,
         syscall = syscall,
+        storage_data = storage.data,
         native_pivot_handler_rop = native.pivot_handler_rop,
         args = opt.args,
         client_fd = opt.client_fd,
@@ -207,6 +239,13 @@ function run_lua_code_in_new_thread(lua_code, opt)
     lua_pushstring(L, serialize(data_from_loader))
     lua_setfield(L, LUA_GLOBALSINDEX, "_data_from_loader");
 
+    local LUA_PATH = "/savedata0/"
+    if is_jailbroken() then
+        LUA_PATH = string.format("/mnt/sandbox/%s_000/savedata0/", get_title_id())
+    end
+
+    lua_runner = lua_runner:gsub("LUA_PATH", LUA_PATH)
+
     local ret = luaL_loadstring(L, lua_runner):tonumber()
     if ret ~= 0 then
         local err = memory.read_null_terminated_string(lua_tolstring(L, -1, 0))
@@ -220,23 +259,9 @@ function run_lua_code_in_new_thread(lua_code, opt)
         return
     end
 
-    local chain = ropchain({
-        fcall_stub_padding_size = 0x50000
-    })
-
-    -- run lua code
-    chain:push_fcall_with_ret(eboot_addrofs.lua_pcall, L, 0, LUA_MULTRET, 0)
-
-    if opt.client_fd then
-        if opt.close_socket_after_finished then
-            chain:push_syscall(syscall.close, opt.client_fd)
-        end
-    end
-
-    local thr = thread:new(chain)
-
-    -- spawn lua in new thread
-    thr:run()
+    local thr = thread:new(eboot_addrofs.lua_pcall, L, 0, LUA_MULTRET, 0)
+    
+    thr:run(opt.async)
 
     return thr
 end

@@ -93,7 +93,7 @@ end
 function memory.memcpy(dest, src, size)
     size = uint64(size):tonumber()
     if native_invoke then
-        memory.write_buffer(dest, memory.read_buffer(src, size))
+        return native.fcall(libc_addrofs.memcpy, dest, src, size)
     else
         assert(size % 8 == 0)
         memory.write_multiple_qwords(dest, memory.read_multiple_qwords(src, size / 8))
@@ -106,7 +106,9 @@ function memory.hex_dump(addr, size)
 end
 
 function memory.read_null_terminated_string(addr)
+    
     local result = ""
+
     while true do
         local chunk = memory.read_buffer(addr, 0x8)
         local null_pos = chunk:find("\0")
@@ -116,5 +118,10 @@ function memory.read_null_terminated_string(addr)
         result = result .. chunk
         addr = addr + #chunk
     end
+
+    if string.byte(result[1]) == 0 then
+        return nil
+    end
+
     return result
 end

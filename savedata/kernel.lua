@@ -37,16 +37,23 @@ function kernel.hex_dump(kaddr, size)
 end
 
 function kernel.read_null_terminated_string(kaddr)
+    
     local result = ""
+
     while true do
-        local chunk = kernel.read_buffer(addr, 0x8)
+        local chunk = kernel.read_buffer(kaddr, 0x8)
         local null_pos = chunk:find("\0")
         if null_pos then 
             return result .. chunk:sub(1, null_pos - 1)
         end
         result = result .. chunk
-        addr = addr + #chunk
+        kaddr = kaddr + #chunk
     end
+    
+    if string.byte(result[1]) == 0 then
+        return nil
+    end
+
     return result
 end
 
@@ -204,3 +211,166 @@ end
 function ipv6_kernel_rw.write_buffer(kaddr, buf)
     ipv6_kernel_rw.copyin(lua.resolve_value(buf), kaddr, #buf)
 end
+
+
+
+
+
+
+-- setup kernel r/w for loaders
+
+function initialize_kernel_rw()
+
+    local state = storage.get("kernel_rw")
+    if state then
+
+        kernel_offset = get_ps5_kernel_offset()
+
+        -- copy ipv6 states given by the exploit
+        ipv6_kernel_rw.data = state.ipv6_kernel_rw_data
+        
+        -- copy existing resolved addresses from exploit
+        kernel.addr = state.kernel_addr
+        
+        -- enable kernel r/w through ipv6 + pipe
+        kernel.copyout = ipv6_kernel_rw.copyout
+        kernel.copyin = ipv6_kernel_rw.copyin
+        kernel.read_buffer = ipv6_kernel_rw.read_buffer
+        kernel.write_buffer = ipv6_kernel_rw.write_buffer
+
+        kernel.rw_initialized = true
+
+        -- automatically find some proc offsets
+        local proc_offset = find_proc_offset()
+        for k,v in pairs(proc_offset) do
+            kernel_offset[k] = v
+        end
+
+        
+    end
+
+end
+
+
+function find_proc_offset()
+
+    check_jailbroken()
+
+    local proc_data = kernel.read_buffer(kernel.addr.curproc, 0x1000)
+    local proc_data_addr = lua.resolve_value(proc_data)
+
+    local p_comm_offset = nil
+    local p_sysent_offset = nil
+    local p_pid_offset = 0xbc
+
+    local p_comm_sign = find_pattern(proc_data, "ce fa ef be cc bb 0d ?")
+    local p_sysent_sign = find_pattern(proc_data, "ff ff ff ff ff ff ff 7f")
+
+    if not p_comm_sign then
+        error("failed to find offset for p_comm")
+    end
+
+    if not p_sysent_sign then
+        error("failed to find offset for p_sysent")
+    end
+
+    p_comm_offset = p_comm_sign[1] - 1 + 0x8
+    p_sysent_offset = p_sysent_sign[1] - 1 - 0x10
+
+    local pid = syscall.getpid()
+    local pid_from_proc = memory.read_dword(proc_data_addr + p_pid_offset)
+
+    if pid ~= pid_from_proc then
+        error("failed to find offset for p_pid")
+    end
+
+    return {
+        P_PID = p_pid_offset,
+        P_COMM = p_comm_offset,
+        P_SYSENT = p_sysent_offset
+    }
+end
+
+
+
+
+
+-- useful functions
+
+function find_proc_by_name(name)
+
+    check_jailbroken()
+
+    local proc = kernel.read_qword(kernel.addr.allproc)
+    while proc ~= uint64(0) do
+
+        local proc_name = kernel.read_null_terminated_string(proc + kernel_offset.P_COMM)
+        if proc_name == name then
+            return proc
+        end
+
+        proc = kernel.read_qword(proc + 0x0) -- le_next
+    end
+
+    return nil
+end
+
+
+function find_proc_by_pid(pid)
+
+    check_jailbroken()
+    assert(type(pid) == "number")
+
+    local proc = kernel.read_qword(kernel.addr.allproc)
+    while proc ~= uint64(0) do
+
+        local proc_pid = kernel.read_dword(proc + kernel_offset.P_PID):tonumber()
+        if proc_pid == pid then
+            return proc
+        end
+
+        proc = kernel.read_qword(proc + 0x0) -- le_next
+    end
+
+    return nil
+end
+
+--
+-- note:
+--
+-- failing to restore sysent back to its original state, for example
+-- such as crashing inside f() will make the ps unstable
+--
+-- one obvious side effect we will not be able to attempt umtx exploit
+-- anymore until we restart the ps 
+--
+function run_with_ps5_syscall_enabled(f)
+
+    check_jailbroken()
+
+    local target_proc = find_proc_by_name("SceGameLiveStreaming")
+
+    local cur_sysent = kernel.read_qword(kernel.addr.curproc + kernel_offset.P_SYSENT)  -- struct sysentvec
+    local target_sysent = kernel.read_qword(target_proc + kernel_offset.P_SYSENT)
+
+    local cur_table_size = kernel.read_dword(cur_sysent) -- sv_size
+    local target_table_size = kernel.read_dword(target_sysent)
+
+    local cur_table = kernel.read_qword(cur_sysent + 0x8) -- sv_table
+    local target_table = kernel.read_qword(target_sysent + 0x8)
+
+    -- replace with ps5 sysent
+    kernel.write_dword(cur_sysent, target_table_size)
+    kernel.write_qword(cur_sysent + 0x8, target_table)
+
+    -- catch error so we can restore sysent
+    local err = run_with_coroutine(f)
+    if err then
+        print(err)
+    end
+    
+    -- restore back
+    kernel.write_dword(cur_sysent, cur_table_size)
+    kernel.write_qword(cur_sysent + 0x8, cur_table) 
+end
+
