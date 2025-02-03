@@ -12,6 +12,7 @@ Examples: `$ python send_lua.py 192.168.1.2 9026 hello_world.lua`
 
 1. `kdata_dumper.lua` - Dump content of kernel .data segments over network (NOTE: you must modify the IP address before you run this payload)
 2. `read_klog.lua` - Read content of `/dev/klog` to user.
+3. `elf_loader.lua` - Load ELF binary from file system (by default it will load `/data/elfldr.elf`). Use FTP server to place the ELF file.
 
 ### send_lua.py additional commands
 
