@@ -27,9 +27,16 @@ kernel_offset = nil
 
 old_print = print
 function print(...)
+    
     local out = prepare_arguments(...) .. "\n"
-    old_print(out)
-    log_fd:write(out)
+    
+    old_print(out) -- print to stdout
+
+    if client_fd and native_invoke then
+        syscall.write(client_fd, out, #out) -- print to client
+    end
+
+    log_fd:write(out) -- print to file
     log_fd:flush()
 end
 
@@ -141,7 +148,7 @@ function remote_lua_loader(port)
         syscall.read(client_fd, tmp, 8)
         local size = memory.read_qword(tmp):tonumber()
         
-        printf("[+] accepted new connection client fd %d", client_fd)
+        -- printf("[+] accepted new connection client fd %d", client_fd)
 
         if size > 0 and size < maxsize then
             
@@ -159,7 +166,7 @@ function remote_lua_loader(port)
             
             local lua_code = memory.read_buffer(buf, size)
 
-            printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
+            -- printf("[+] accepted lua code with size %d (%s)", #lua_code, hex(#lua_code))
             
             if options.enable_signal_handler then
                 signal.set_sink_fd(client_fd)

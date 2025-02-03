@@ -263,7 +263,7 @@ function find_proc_offset()
     local p_sysent_offset = nil
     local p_pid_offset = 0xbc
 
-    local p_comm_sign = find_pattern(proc_data, "ce fa ef be cc bb 0d ?")
+    local p_comm_sign = find_pattern(proc_data, "ce fa ef be cc bb")
     local p_sysent_sign = find_pattern(proc_data, "ff ff ff ff ff ff ff 7f")
 
     if not p_comm_sign then
@@ -341,7 +341,7 @@ end
 -- failing to restore sysent back to its original state, for example
 -- such as crashing inside f() will make the ps unstable
 --
--- one obvious side effect we will not be able to attempt umtx exploit
+-- one obvious side effect is we will not be able to attempt umtx exploit
 -- anymore until we restart the ps 
 --
 function run_with_ps5_syscall_enabled(f)
@@ -359,7 +359,7 @@ function run_with_ps5_syscall_enabled(f)
     local cur_table = kernel.read_qword(cur_sysent + 0x8) -- sv_table
     local target_table = kernel.read_qword(target_sysent + 0x8)
 
-    -- replace with ps5 sysent
+    -- replace with target sysent
     kernel.write_dword(cur_sysent, target_table_size)
     kernel.write_qword(cur_sysent + 0x8, target_table)
 
@@ -367,9 +367,6 @@ function run_with_ps5_syscall_enabled(f)
     local err = run_with_coroutine(f)
 
     if err then
-        if client_fd then
-            syscall.write(client_fd, lua.resolve_value(err), #err)
-        end
         print(err)
     end
     
