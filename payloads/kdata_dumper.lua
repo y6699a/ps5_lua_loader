@@ -1,6 +1,6 @@
 
 --[[
-    run netcat on the other end to receives the kernel .data dump
+    run netcat on the other end to receive the kernel .data dump
     $ nc -nlvp 5656 > kernel_data_dump.bin
 ]]
 
@@ -42,13 +42,15 @@ function dump_kdata_over_network(IP, PORT)
     
     local read_size = PAGE_SIZE
     local mem = memory.alloc(read_size)
+    
+    local MB = 0x100000
 
     for index = start_index, end_index-1, read_size do
 
         local total_read = index - start_index
 
-        if total_read % (5 * 0x100000) == 0 then
-            printf("dumping kernel .data: %d / %.2f mb", total_read / 0x100000, end_index / 0x100000)
+        if total_read % (5 * MB) == 0 then
+            printf("dumping kernel .data: %d / %.2f mb", total_read / MB, end_index / MB)
         end
 
         kernel.copyout(kernel.addr.data_base + index, mem, read_size)
@@ -59,7 +61,7 @@ function dump_kdata_over_network(IP, PORT)
         end
     end
 
-    printf("dumped %.2f mb of kernel data", end_index / 0x100000)
+    printf("dumped %.2f mb of kernel data", end_index / MB)
 
 end
 

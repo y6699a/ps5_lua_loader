@@ -33,7 +33,7 @@ function print(...)
     old_print(out) -- print to stdout
 
     if client_fd and native_invoke then
-        syscall.write(client_fd, out, #out) -- print to client
+        syscall.write(client_fd, out, #out) -- print to socket
     end
 
     log_fd:write(out) -- print to file
@@ -57,6 +57,7 @@ require "native"
 require "thread"
 require "kernel_offset"
 require "kernel"
+require "gpu"
 
 function run_lua_code(lua_code)
 
@@ -230,7 +231,7 @@ function main()
     print("[+] arbitrary r/w primitives achieved")
 
     -- resolve required syscalls for remote lua loader
-    -- note: syscall resolved here will also be available in payloads
+    -- note: syscall resolved here will also be available in the payloads
     syscall.resolve({
         read = 0x3,
         write = 0x4,
@@ -239,6 +240,7 @@ function main()
         getuid = 0x18,
         accept = 0x1e,
         pipe = 0x2a,
+        mprotect = 0x4a,
         socket = 0x61,
         connect = 0x62,
         bind = 0x68,

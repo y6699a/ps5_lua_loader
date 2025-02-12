@@ -109,6 +109,7 @@ function native.setup_cmd_handler(pivot_handler)
     chain.jmpbuf = memory.alloc(0x100)
     chain.jump_table = memory.alloc(0x8 * 16)
 
+    -- unlock native handler for other threads
     chain:push_fcall(libc_addrofs.Mtx_unlock, pivot_handler.lock)
 
     -- hacky way to recover rbp & r13

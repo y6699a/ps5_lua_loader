@@ -216,15 +216,116 @@ end
 
 
 
+-- cpu page table
 
--- setup kernel r/w for loaders
+CPU_PDE = {
+    PRESENT = 0,
+    RW = 1,
+    USER = 2,
+    WRITE_THROUGH = 3,
+    CACHE_DISABLE = 4,
+    ACCESSED = 5,
+    DIRTY = 6,
+    PS = 7,
+    GLOBAL = 8,
+    XOTEXT = 58,
+    PROTECTION_KEY = 59,
+    EXECUTE_DISABLE = 63
+}
 
+CPU_PDE_MASKS = {
+    PRESENT = 1,
+    RW = 1,
+    USER = 1,
+    WRITE_THROUGH = 1,
+    CACHE_DISABLE = 1,
+    ACCESSED = 1,
+    DIRTY = 1,
+    PS = 1,
+    GLOBAL = 1,
+    XOTEXT = 1,
+    PROTECTION_KEY = 0xf,
+    EXECUTE_DISABLE = 1
+}
+
+CPU_PG_PHYS_FRAME = uint64("0x000ffffffffff000")
+CPU_PG_PS_FRAME = uint64("0x000fffffffe00000")
+
+function cpu_pde_field(pde, field)
+    local shift = CPU_PDE[field]
+    local mask = CPU_PDE_MASKS[field]
+    return bit64.band(bit64.rshift(pde, shift), mask):tonumber()
+end
+
+function cpu_walk_pt(cr3, vaddr)
+
+    assert(vaddr, cr3)
+
+    local pml4e_index = bit64.band(bit64.rshift(vaddr, 39), 0x1ff)
+    local pdpe_index = bit64.band(bit64.rshift(vaddr, 30), 0x1ff)
+    local pde_index = bit64.band(bit64.rshift(vaddr, 21), 0x1ff)
+    local pte_index = bit64.band(bit64.rshift(vaddr, 12), 0x1ff)
+
+    -- pml4
+
+    local pml4e = kernel.read_qword(phys_to_dmap(cr3) + pml4e_index * 8)
+    if cpu_pde_field(pml4e, "PRESENT") ~= 1 then
+        return nil
+    end
+
+    -- pdp
+
+    local pdp_base_pa = bit64.band(pml4e, CPU_PG_PHYS_FRAME)
+    local pdpe_va = phys_to_dmap(pdp_base_pa) + pdpe_index * 8
+    local pdpe = kernel.read_qword(pdpe_va)
+
+    if cpu_pde_field(pdpe, "PRESENT") ~= 1 then
+        return nil
+    end
+
+    -- pd
+
+    local pd_base_pa = bit64.band(pdpe, CPU_PG_PHYS_FRAME)
+    local pde_va = phys_to_dmap(pd_base_pa) + pde_index * 8
+    local pde = kernel.read_qword(pde_va)
+
+    if cpu_pde_field(pde, "PRESENT") ~= 1 then
+        return nil
+    end
+
+    -- large page
+    if cpu_pde_field(pde, "PS") == 1 then
+        return bit64.bor(
+            bit64.band(pde, CPU_PG_PS_FRAME),
+            bit64.band(vaddr, 0x1fffff) -- todo: remove hardcoded value
+        )
+    end
+
+    -- pt
+
+    local pt_base_pa = bit64.band(pde, CPU_PG_PHYS_FRAME)
+    local pte_va = phys_to_dmap(pt_base_pa) + pte_index * 8
+    local pte = kernel.read_qword(pte_va)
+
+    if cpu_pde_field(pte, "PRESENT") ~= 1 then
+        return nil
+    end
+
+    return bit64.bor(
+        bit64.band(pte, CPU_PG_PHYS_FRAME),
+        bit64.band(vaddr, 0x3fff)
+    )
+end
+
+
+
+
+
+-- setup kernel r/w for the loader
 function initialize_kernel_rw()
 
     local state = storage.get("kernel_rw")
     if state then
-
-        kernel_offset = get_ps5_kernel_offset()
 
         -- copy ipv6 states given by the exploit
         ipv6_kernel_rw.data = state.ipv6_kernel_rw_data
@@ -240,54 +341,104 @@ function initialize_kernel_rw()
 
         kernel.rw_initialized = true
 
-        -- automatically find some proc offsets
-        local proc_offset = find_proc_offset()
-        for k,v in pairs(proc_offset) do
-            kernel_offset[k] = v
-        end
+        initialize_kernel_offsets()
+    end
+end
 
-        
+
+function initialize_kernel_offsets()
+
+    kernel_offset = get_ps5_kernel_offset()
+
+    -- find some structure offsets on runtime
+    local offsets = find_offsets()
+    
+    for k,v in pairs(offsets) do
+        kernel_offset[k] = v
     end
 
 end
 
+-- credit: @hammer-83
+function find_vmspace_pmap_offset()
 
-function find_proc_offset()
+    local vmspace = kernel.read_qword(kernel.addr.curproc + kernel_offset.PROC_VM_SPACE)
+    
+    -- Note, this is the offset of vm_space.vm_map.pmap on 1.xx.
+    -- It is assumed that on higher firmwares it's only increasing.
+    local cur_scan_offset = 0x1C8
+    
+    for i=1,6 do
+        local scan_val = kernel.read_qword(vmspace + cur_scan_offset + (i * 8))
+        local offset_diff = (scan_val - vmspace):tonumber()
+        if offset_diff >= 0x2C0 and offset_diff <= 0x2F0 then
+            return cur_scan_offset + (i * 8)
+        end
+    end
 
-    check_jailbroken()
+    error("failed to find VMSPACE_VM_PMAP offset")
+end
+
+
+-- credit: @hammer-83
+function find_vmspace_vmid_offset()
+
+    local vmspace = kernel.read_qword(kernel.addr.curproc + kernel_offset.PROC_VM_SPACE)
+
+    -- Note, this is the offset of vm_space.vm_map.vmid on 1.xx.
+    -- It is assumed that on higher firmwares it's only increasing.
+    local cur_scan_offset = 0x1D4
+    
+    for i=1,8 do
+        local scan_offset = cur_scan_offset + (i * 4)
+        local scan_val = kernel.read_dword(vmspace + scan_offset):tonumber()
+        if scan_val > 0 and scan_val <= 0x10 then
+            return scan_offset
+        end
+    end
+
+    error("failed to find VMSPACE_VM_VMID offset")
+end
+
+
+function find_proc_offsets()
 
     local proc_data = kernel.read_buffer(kernel.addr.curproc, 0x1000)
     local proc_data_addr = lua.resolve_value(proc_data)
-
-    local p_comm_offset = nil
-    local p_sysent_offset = nil
-    local p_pid_offset = 0xbc
 
     local p_comm_sign = find_pattern(proc_data, "ce fa ef be cc bb")
     local p_sysent_sign = find_pattern(proc_data, "ff ff ff ff ff ff ff 7f")
 
     if not p_comm_sign then
-        error("failed to find offset for p_comm")
+        error("failed to find offset for PROC_COMM")
     end
 
     if not p_sysent_sign then
-        error("failed to find offset for p_sysent")
+        error("failed to find offset for PROC_SYSENT")
     end
 
-    p_comm_offset = p_comm_sign[1] - 1 + 0x8
-    p_sysent_offset = p_sysent_sign[1] - 1 - 0x10
-
-    local pid = syscall.getpid()
-    local pid_from_proc = memory.read_dword(proc_data_addr + p_pid_offset)
-
-    if pid ~= pid_from_proc then
-        error("failed to find offset for p_pid")
-    end
+    local p_comm_offset = p_comm_sign[1] - 1 + 0x8
+    local p_sysent_offset = p_sysent_sign[1] - 1 - 0x10
 
     return {
-        P_PID = p_pid_offset,
-        P_COMM = p_comm_offset,
-        P_SYSENT = p_sysent_offset
+        PROC_COMM = p_comm_offset,
+        PROC_SYSENT = p_sysent_offset
+    }
+end
+
+function find_offsets()
+
+    check_jailbroken()
+
+    local proc_offsets = find_proc_offsets()
+    local vm_map_pmap_offset = find_vmspace_pmap_offset()
+    local vm_map_vmid_offset =  find_vmspace_vmid_offset()
+
+    return {
+        PROC_COMM = proc_offsets.PROC_COMM,
+        PROC_SYSENT = proc_offsets.PROC_SYSENT,
+        VMSPACE_VM_PMAP = vm_map_pmap_offset,
+        VMSPACE_VM_VMID = vm_map_vmid_offset,
     }
 end
 
@@ -304,7 +455,7 @@ function find_proc_by_name(name)
     local proc = kernel.read_qword(kernel.addr.allproc)
     while proc ~= uint64(0) do
 
-        local proc_name = kernel.read_null_terminated_string(proc + kernel_offset.P_COMM)
+        local proc_name = kernel.read_null_terminated_string(proc + kernel_offset.PROC_COMM)
         if proc_name == name then
             return proc
         end
@@ -324,7 +475,7 @@ function find_proc_by_pid(pid)
     local proc = kernel.read_qword(kernel.addr.allproc)
     while proc ~= uint64(0) do
 
-        local proc_pid = kernel.read_dword(proc + kernel_offset.P_PID):tonumber()
+        local proc_pid = kernel.read_dword(proc + kernel_offset.PROC_PID):tonumber()
         if proc_pid == pid then
             return proc
         end
@@ -335,23 +486,49 @@ function find_proc_by_pid(pid)
     return nil
 end
 
---
--- note:
---
--- failing to restore sysent back to its original state, for example
--- such as crashing inside f() will make the ps unstable
---
--- one obvious side effect is we will not be able to attempt umtx exploit
--- anymore until we restart the ps 
---
+
+function get_proc_cr3(proc)
+    
+    check_jailbroken()
+    
+    local vmspace = kernel.read_qword(proc + kernel_offset.PROC_VM_SPACE)
+    local pmap_store = kernel.read_qword(vmspace + kernel_offset.VMSPACE_VM_PMAP)
+    
+    return kernel.read_qword(pmap_store + kernel_offset.PMAP_CR3)
+end
+
+-- translate virtual address to physical address
+-- note: use kernel page table if cr3 is not given
+function virt_to_phys(virt_addr, cr3)
+    
+    assert(kernel.addr.dmap_base and virt_addr)
+    
+    cr3 = cr3 or kernel.addr.kernel_cr3
+    return cpu_walk_pt(cr3, virt_addr)
+end
+
+
+function phys_to_dmap(phys_addr)
+    assert(kernel.addr.dmap_base and phys_addr)
+    return kernel.addr.dmap_base + phys_addr
+end
+
+
+-- replace curproc sysent with sysent of other ps5 process
+-- note: failure to restore curproc sysent will have side effect on the game/ps
 function run_with_ps5_syscall_enabled(f)
 
     check_jailbroken()
 
-    local target_proc = find_proc_by_name("SceGameLiveStreaming")
+    local target_proc_name = "SceGameLiveStreaming" -- arbitrarily chosen ps5 process
 
-    local cur_sysent = kernel.read_qword(kernel.addr.curproc + kernel_offset.P_SYSENT)  -- struct sysentvec
-    local target_sysent = kernel.read_qword(target_proc + kernel_offset.P_SYSENT)
+    local target_proc = find_proc_by_name(target_proc_name) 
+    if not target_proc then
+        errorf("failed to find proc addr of %s", target_proc_name)
+    end
+
+    local cur_sysent = kernel.read_qword(kernel.addr.curproc + kernel_offset.PROC_SYSENT)  -- struct sysentvec
+    local target_sysent = kernel.read_qword(target_proc + kernel_offset.PROC_SYSENT)
 
     local cur_table_size = kernel.read_dword(cur_sysent) -- sv_size
     local target_table_size = kernel.read_dword(target_sysent)
@@ -363,9 +540,8 @@ function run_with_ps5_syscall_enabled(f)
     kernel.write_dword(cur_sysent, target_table_size)
     kernel.write_qword(cur_sysent + 0x8, target_table)
 
-    -- catch error so we can restore sysent
+    -- catch lua error so we can restore sysent
     local err = run_with_coroutine(f)
-
     if err then
         print(err)
     end

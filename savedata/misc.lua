@@ -169,7 +169,7 @@ function get_module_name(addr)
     return memory.read_null_terminated_string(buf+8)
 end
 
-function resolve_base(initial_addr, modname, max_page_search)
+function resolve_mod_base(initial_addr, modname, max_page_search)
 
     max_page_search = max_page_search or 5
 
@@ -395,7 +395,7 @@ end
 function is_jailbroken()
     local cur_uid = syscall.getuid():tonumber()
     local is_in_sandbox = syscall.is_in_sandbox():tonumber()
-    return cur_uid == 0 and is_in_sandbox == 0 and kernel.rw_initialized == true
+    return cur_uid == 0 and is_in_sandbox == 0
 end
 
 function check_jailbroken()
@@ -417,7 +417,7 @@ end
 
 function dlsym(handle, sym)
 
-    check_jailbroken()
+    -- check_jailbroken()
     assert(type(sym) == "string")
     
     local addr_out = memory.alloc(0x8)
@@ -431,8 +431,7 @@ end
 
 function get_title_id()
 
-    local sceKernelGetAppInfo_addr = dlsym(0x2001, "sceKernelGetAppInfo")
-    local sceKernelGetAppInfo = fcall(sceKernelGetAppInfo_addr)
+    local sceKernelGetAppInfo = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetAppInfo"))
 
     local app_info = memory.alloc(0x100)
 
@@ -441,6 +440,40 @@ function get_title_id()
     end
 
     return memory.read_null_terminated_string(app_info + 0x10)
+end
+
+-- note: this is only for current process
+function find_mod_by_name(name)
+
+    local sceKernelGetModuleListInternal = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetModuleListInternal"))
+    local sceKernelGetModuleInfo = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetModuleInfo"))
+
+    local mem = memory.alloc(4 * 0x300)
+    local actual_num = memory.alloc(8)
+
+    sceKernelGetModuleListInternal(mem, 0x300, actual_num)
+
+    local num = memory.read_qword(actual_num):tonumber()
+    for i=0,num-1 do
+
+        local handle = memory.read_dword(mem + i*4)
+        local info = memory.alloc(0x160)
+        memory.write_qword(info, 0x160)
+
+        sceKernelGetModuleInfo(handle, info)
+
+        local mod_name = memory.read_null_terminated_string(info + 8)
+        if name == mod_name then
+
+            local base_addr = memory.read_qword(info + 0x108)
+            return {
+                handle = handle,
+                base_addr = base_addr,
+            }
+        end
+    end
+
+    return nil
 end
 
 

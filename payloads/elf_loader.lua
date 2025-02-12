@@ -1,4 +1,9 @@
 
+-- rudimentary elf loader
+-- only expected to load john tornblom's elfldr.elf
+
+-- credit to nullptr for porting and specter for the original code
+
 elf_loader = {}
 elf_loader.__index = elf_loader
 
@@ -13,6 +18,7 @@ function elf_loader:load_from_file(filepath)
 
     local self = setmetatable({}, elf_loader)
     
+    self.filepath = filepath
     self.elf_data = file_read(filepath)
     self.parse(self)
     
@@ -185,6 +191,8 @@ function elf_loader:run()
     memory.write_qword(args + 0x18, ipv6_kernel_rw.data.pipe_addr)  -- arg4 = uint64_t kpipe_addr
     memory.write_qword(args + 0x20, kernel.addr.data_base)          -- arg5 = uint64_t kdata_base_addr
     memory.write_qword(args + 0x28, self.payloadout)                -- arg6 = int *payloadout
+
+    printf("spawning %s", self.filepath)
 
     -- spawn elf in new thread
     local ret = Thrd_create(thr_handle_addr, self.elf_entry_point, args):tonumber()
