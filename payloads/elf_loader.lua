@@ -229,7 +229,20 @@ function main()
     })
 
     run_with_ps5_syscall_enabled(function()
-        local elf = elf_loader:load_from_file("/data/elfldr.elf")
+        local elfldr_data_path = "/data/elfldr.elf"
+        local elfldr_savedata_path = string.format("/mnt/sandbox/%s_000/savedata0/elfldr.elf", get_title_id())
+
+        local existing_path = ""
+        if file_exists(elfldr_data_path) then
+            existing_path = elfldr_data_path
+        elseif file_exists(elfldr_savedata_path) then
+            existing_path = elfldr_savedata_path
+        else
+            errorf("file not exist: %s", filepath)
+        end
+        printf("loading elfldr from: %s", existing_path)
+
+        local elf = elf_loader:load_from_file(existing_path)
         elf:run()
         elf:wait_for_elf_to_exit()
     end)
