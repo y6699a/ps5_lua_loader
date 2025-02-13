@@ -269,8 +269,6 @@ function gpu.transfer_physical_buffer(phys_addr, size, is_write)
 
     -- do the DMA operation
     gpu.submit_dma_data_command(dst, src, size)
-
-    return nil
 end
 
 function gpu.read_buffer(addr, size)
