@@ -206,7 +206,7 @@ function gpu.submit_dma_data_command(dest_va, src_va, size)
 
     local dcb_count = 1
     local dcb_gpu_addr = memory.alloc(dcb_count * 0x8)
-    local dcb_sizes_in_bytes = memory.alloc(dcb_count * 0x8)
+    local dcb_sizes_in_bytes = memory.alloc(dcb_count * 0x4)
 
     -- prep command buf
     local dma_data = gpu.pm4_dma_data(dest_va, src_va, size)
@@ -214,7 +214,7 @@ function gpu.submit_dma_data_command(dest_va, src_va, size)
 
     -- prep param
     memory.write_qword(dcb_gpu_addr, gpu.cmd_va)
-    memory.write_qword(dcb_sizes_in_bytes, #dma_data)
+    memory.write_dword(dcb_sizes_in_bytes, #dma_data)
 
     -- submit to gpu
     local ret = sceGnmSubmitCommandBuffers(dcb_count, dcb_gpu_addr, dcb_sizes_in_bytes, 0, 0):tonumber()
