@@ -237,6 +237,10 @@ function gpu.transfer_physical_buffer(phys_addr, size, is_write)
     local trunc_phys_addr = bit64.band(phys_addr, bit64.bnot(gpu.dmem_size - 1))
     local offset = phys_addr - trunc_phys_addr
 
+    if (offset + size > gpu.dmem_size) then
+        error("error: trying to write more than direct memory size: " .. size)
+    end
+
     local prot_ro = bit32.bor(PROT_READ, PROT_WRITE, GPU_READ)
     local prot_rw = bit32.bor(prot_ro, GPU_WRITE)
     
