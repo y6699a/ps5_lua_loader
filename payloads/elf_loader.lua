@@ -238,7 +238,7 @@ function main()
         elseif file_exists(elfldr_savedata_path) then
             existing_path = elfldr_savedata_path
         else
-            errorf("file not exist: %s", filepath)
+            errorf("file not exist: %s", existing_path)
         end
         printf("loading elfldr from: %s", existing_path)
 
