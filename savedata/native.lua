@@ -100,7 +100,7 @@ function native.setup_cmd_handler(pivot_handler)
 
     -- todo: setting hardcoded offset like this is bad. improve this
     local stack_offset = -0x78
-    if game_name == "HamidashiCreative" or game_name == "B" then
+    if game_name == "HamidashiCreative" or game_name == "Aikagi2" then
         stack_offset = -0x68
     end
 

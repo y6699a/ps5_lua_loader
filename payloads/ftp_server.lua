@@ -63,7 +63,7 @@ offsets = {
             gmtime = 0x3DA60,
             gmtime_s = 0x34790
         },
-        b = {
+        aikagi_2 = {
             time = 0xB2EF0,
             gmtime = 0x33800,
             gmtime_s = 0x2A480
@@ -100,7 +100,7 @@ local add_offsets = {}
 function get_offsets(gamename)
     if gamename == "RaspberryCube" then add_offsets = offsets.libc.raspberry_cube end
     if gamename == "Aibeya" then add_offsets = offsets.libc.aibeya end
-    if gamename == "B" then add_offsets = offsets.libc.b end
+    if gamename == "Aikagi2" then add_offsets = offsets.libc.aikagi_2 end
     if gamename == "HamidashiCreative" then add_offsets = offsets.libc.hamidashi_creative end
     if gamename == "AikagiKimiIsshoniPack" then add_offsets = offsets.libc.aikagi_kimi_isshoni_pack end
     if gamename == "C" then add_offsets = offsets.libc.c end
