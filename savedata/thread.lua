@@ -86,7 +86,7 @@ end
 function thread:join()
 
     -- dont call `Thrd_join` if we already done so
-    if not self.async then
+    if self.async == false then
         return nil
     end
     
