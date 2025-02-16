@@ -318,6 +318,7 @@ function ropchain:push_add_dword_memory(addr, num)
 end
 
 function ropchain:push_add_atomic_qword(addr, val)
+    self:push_set_rdx(0) -- some receive a 3rd argument and have a switch case
     self:push_set_rsi(val)
     self:push_set_rdi(addr)
     self:push(libc_addrofs.Atomic_fetch_add_8)
