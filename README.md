@@ -20,7 +20,7 @@ This repo provides few [payloads](payloads/) for you to play around. PRs for use
 
 * excellent blog [post](https://memorycorruption.net/posts/rce-lua-factorio/) where most of the ideas of lua primitives are taken from 
 * flatz - for sharing ideas and lua implementations
-* null_ptr - for testing & ideas
+* null_ptr - for helping to develop umtx exploit for PS5 & numerous helps with the loader development
 * gezine - for sharing the vulnerable games & ideas
 * specter & chendo - for webkit implementations which i refer a lot
 * al-azif - parts and information grabbed from his sdk, aswell as from his ftp server
