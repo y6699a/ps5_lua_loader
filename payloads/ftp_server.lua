@@ -63,7 +63,7 @@ offsets = {
             gmtime = 0x3DA60,
             gmtime_s = 0x34790
         },
-        b = {
+        aikagi_2 = {
             time = 0xB2EF0,
             gmtime = 0x33800,
             gmtime_s = 0x2A480
@@ -100,7 +100,7 @@ local add_offsets = {}
 function get_offsets(gamename)
     if gamename == "RaspberryCube" then add_offsets = offsets.libc.raspberry_cube end
     if gamename == "Aibeya" then add_offsets = offsets.libc.aibeya end
-    if gamename == "B" then add_offsets = offsets.libc.b end
+    if gamename == "Aikagi2" then add_offsets = offsets.libc.aikagi_2 end
     if gamename == "HamidashiCreative" then add_offsets = offsets.libc.hamidashi_creative end
     if gamename == "AikagiKimiIsshoniPack" then add_offsets = offsets.libc.aikagi_kimi_isshoni_pack end
     if gamename == "C" then add_offsets = offsets.libc.c end
@@ -925,10 +925,6 @@ end
 
 function ftp_init()
     get_offsets(game_name)
-
-    local f = io.open("/av_contents/content_tmp/ftp.txt", "w")
-    f:write("file created by ftp server.")
-    f:close()
 
     ftp.client.cur_path = ftp.client.root_path
     ftp.server.server_sockfd = sceNetSocket(AF_INET, SOCK_STREAM, 0)

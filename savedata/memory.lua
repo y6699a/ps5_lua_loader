@@ -93,7 +93,7 @@ end
 function memory.memcpy(dest, src, size)
     size = uint64(size):tonumber()
     if native_invoke then
-        memory.write_buffer(dest, memory.read_buffer(src, size))
+        return native.fcall(libc_addrofs.memcpy, dest, src, size)
     else
         assert(size % 8 == 0)
         memory.write_multiple_qwords(dest, memory.read_multiple_qwords(src, size / 8))
@@ -106,9 +106,11 @@ function memory.hex_dump(addr, size)
 end
 
 function memory.read_null_terminated_string(addr)
+    
     local result = ""
+
     while true do
-        local chunk = memory.read_buffer(addr, 0x50)
+        local chunk = memory.read_buffer(addr, 0x8)
         local null_pos = chunk:find("\0")
         if null_pos then 
             return result .. chunk:sub(1, null_pos - 1)
@@ -116,32 +118,9 @@ function memory.read_null_terminated_string(addr)
         result = result .. chunk
         addr = addr + #chunk
     end
-    return result
-end
 
-function memory.check_access(addr, check_size)
-
-    if not memory.pipe_initialized then
-        local read_fd, write_fd = create_pipe()
-        memory.pipe_read_fd = read_fd
-        memory.pipe_write_fd = write_fd
-        memory.pipe_buf = memory.alloc(0x1000)
-        memory.pipe_initialized = true 
-    end
-
-    check_size = check_size or 1
-
-    local actual_write_size = syscall.write(memory.pipe_write_fd, addr, check_size):tonumber()
-    local result = actual_write_size == check_size
-    if not result then
-        return false
-    end
-
-    if actual_write_size > 1 then
-        local actual_read_size = syscall.read(memory.pipe_read_fd, memory.pipe_buf, check_size):tonumber()
-        if actual_read_size ~= actual_write_size then
-            return false
-        end
+    if string.byte(result[1]) == 0 then
+        return nil
     end
 
     return result

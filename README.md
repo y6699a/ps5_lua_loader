@@ -10,6 +10,7 @@ Currently this loader is specific for the following list of games:
 3. Hamidashi Creative (CUSA27389)
 4. Hamidashi Creative Demo (CUSA27390) - Requires latest firmware to download from PSN
 5. Aikagi Kimi to Issho ni Pack (CUSA16229)
+6. Aikagi 2 (CUSA19556)
 
 For guide on how to setup this loader, please refer [SETUP.md](SETUP.md)
 
@@ -19,9 +20,10 @@ This repo provides few [payloads](payloads/) for you to play around. PRs for use
 
 * excellent blog [post](https://memorycorruption.net/posts/rce-lua-factorio/) where most of the ideas of lua primitives are taken from 
 * flatz - for sharing ideas and lua implementations
-* null_ptr - for testing & ideas
+* null_ptr - for helping to develop umtx exploit for PS5 & numerous helps with the loader development
 * gezine - for sharing the vulnerable games & ideas
 * specter & chendo - for webkit implementations which i refer a lot
 * al-azif - parts and information grabbed from his sdk, aswell as from his ftp server
+* horror - for the notification popup and ftp server payloads
 * everyone else who shared their knowledge with the community
 

@@ -2,7 +2,7 @@
 games_identification = {
     [0xbb0] = "RaspberryCube",
     [0xb90] = "Aibeya",
-    [0x170] = "B",
+    [0x170] = "Aikagi2",
     [0x420] = "HamidashiCreative",
     [0x5d0] = "AikagiKimiIsshoniPack",
     [0x280] = "C",
@@ -181,7 +181,7 @@ gadget_table = {
             Atomic_fetch_add_8 = 0x43900,
         }
     },
-    b = {
+    aikagi_2 = {
         gadgets = {
             ["ret"] = 0x4c,
             

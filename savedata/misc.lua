@@ -30,6 +30,16 @@ function prepare_arguments(...)
     return s
 end
 
+function file_exists(name)
+    local f = io.open(name, "r")
+    if f ~= nil then
+        io.close(f)
+        return true
+    else
+        return false
+    end
+ end
+
 function file_write(filename, data, mode)
     local fd = io.open(filename, mode or "wb")
     fd:write(data)
@@ -48,7 +58,10 @@ function hex_dump(buf, addr)
         local hexstr = chunk:gsub('.', function(c) 
             return string.format('%02X ', string.byte(c)) 
         end)
-        local ascii = chunk:gsub('%c', '.') -- replace non-printable characters
+        local ascii = chunk:gsub('.', function(c)
+            local byte = string.byte(c)
+            return (byte >= 32 and byte <= 126) and c or '.'
+        end)
         table.insert(result, string.format('%s  %-48s %s', hex(addr+i-1), hexstr, ascii))
     end
     return table.concat(result, '\n')
@@ -90,7 +103,9 @@ end
 function dump_table(o, depth, indent)
     depth = depth or 2
     indent = indent or 0
-    if depth < 1 then return tostring(o) end
+    if depth < 1 then
+        return string.format("%q", tostring(o))
+    end
     local function get_indent(level)
         return string.rep("  ", level)
     end
@@ -154,9 +169,11 @@ function get_module_name(addr)
     return memory.read_null_terminated_string(buf+8)
 end
 
-function resolve_base(initial_addr, modname, max_page_search)
+function resolve_mod_base(initial_addr, modname, max_page_search)
 
-    local initial_page = initial_addr:band(uint64(0xfff):bnot())
+    max_page_search = max_page_search or 5
+
+    local initial_page = bit64.band(initial_addr, bit64.bnot(0xfff))
     local page_size = 0x1000
 
     for i=0, max_page_search-1 do
@@ -272,7 +289,7 @@ function sleep(val, unit)
         return nanosleep(to_ns(val, unit))
     else
         if unit ~= 's' then
-            error("sleep() only support second if native exec is available")
+            error("sleep() only support second if native exec is not available")
         end
         local sec = tonumber(os.clock() + val); 
         while (os.clock() < sec) do end
@@ -281,7 +298,6 @@ end
 
 function send_ps_notification(text)
 
-    local O_WRONLY = 1
     local notify_buffer_size = 0xc30
     local notify_buffer = memory.alloc(notify_buffer_size)
     local icon_uri = "cxml://psnotification/tex_icon_system"
@@ -337,13 +353,7 @@ function map_fixed_address(addr, size)
         mmap = 477,
     })
 
-    local MAP_PRIVATE = 0x2
-    local MAP_FIXED = 0x10
-    local MAP_ANONYMOUS = 0x1000
     local MAP_COMBINED = bit32.bor(MAP_PRIVATE, MAP_FIXED, MAP_ANONYMOUS)
-
-    local PROT_READ = 0x1
-    local PROT_WRITE = 0x2
     local PROT_COMBINED = bit32.bor(PROT_READ, PROT_WRITE)
 
     local ret = syscall.mmap(addr, size, PROT_COMBINED, MAP_COMBINED, -1 ,0)
@@ -352,6 +362,118 @@ function map_fixed_address(addr, size)
     end
 
     return ret
+end
+
+function check_memory_access(addr, check_size)
+
+    if not memory.pipe_initialized then
+        local read_fd, write_fd = create_pipe()
+        memory.pipe_read_fd = read_fd
+        memory.pipe_write_fd = write_fd
+        memory.pipe_buf = memory.alloc(0x1000)
+        memory.pipe_initialized = true 
+    end
+
+    check_size = check_size or 1
+
+    local actual_write_size = syscall.write(memory.pipe_write_fd, addr, check_size):tonumber()
+    local result = actual_write_size == check_size
+    if not result then
+        return false
+    end
+
+    if actual_write_size > 1 then
+        local actual_read_size = syscall.read(memory.pipe_read_fd, memory.pipe_buf, check_size):tonumber()
+        if actual_read_size ~= actual_write_size then
+            return false
+        end
+    end
+
+    return result
+end
+
+function is_jailbroken()
+    local cur_uid = syscall.getuid():tonumber()
+    local is_in_sandbox = syscall.is_in_sandbox():tonumber()
+    return cur_uid == 0 and is_in_sandbox == 0
+end
+
+function check_jailbroken()
+    if not is_jailbroken() then
+        error("process is not jailbroken")
+    end
+end
+
+function load_prx(path)
+
+    local handle_out = memory.alloc(0x4)
+
+    if syscall.dynlib_load_prx(path, 0x0, handle_out, 0x0):tonumber() ~= 0x0 then
+        error("dynlib_load_prx() error: " .. get_error_string())
+    end
+
+    return memory.read_dword(handle_out)
+end
+
+function dlsym(handle, sym)
+
+    -- check_jailbroken()
+    assert(type(sym) == "string")
+    
+    local addr_out = memory.alloc(0x8)
+
+    if syscall.dlsym(handle, sym, addr_out):tonumber() == -1 then
+        error("dlsym() error: " .. get_error_string())
+    end
+
+    return memory.read_qword(addr_out)
+end
+
+function get_title_id()
+
+    local sceKernelGetAppInfo = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetAppInfo"))
+
+    local app_info = memory.alloc(0x100)
+
+    if sceKernelGetAppInfo(syscall.getpid(), app_info):tonumber() ~= 0 then
+        error("sceKernelGetAppInfo() error: " .. hex(ret))
+    end
+
+    return memory.read_null_terminated_string(app_info + 0x10)
+end
+
+-- note: this is only for current process
+function find_mod_by_name(name)
+
+    local sceKernelGetModuleListInternal = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetModuleListInternal"))
+    local sceKernelGetModuleInfo = fcall(dlsym(LIBKERNEL_HANDLE, "sceKernelGetModuleInfo"))
+
+    local mem = memory.alloc(4 * 0x300)
+    local actual_num = memory.alloc(8)
+
+    sceKernelGetModuleListInternal(mem, 0x300, actual_num)
+
+    local num = memory.read_qword(actual_num):tonumber()
+    for i=0,num-1 do
+
+        local handle = memory.read_dword(mem + i*4)
+        local info = memory.alloc(0x160)
+        memory.write_qword(info, 0x160)
+
+        sceKernelGetModuleInfo(handle, info)
+
+        local mod_name = memory.read_null_terminated_string(info + 8)
+        if name == mod_name then
+
+            local base_addr = memory.read_qword(info + 0x108)
+            return {
+                handle = handle,
+                base_addr = base_addr,
+            }
+        end
+    end
+
+    return nil
 end
 
 
