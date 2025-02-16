@@ -79,10 +79,17 @@ function thread:run(async)
     if not async then
         self:join(self)
     end
+
+    self.async = async
 end
 
 function thread:join()
 
+    -- dont call `Thrd_join` if we already done so
+    if not self.async then
+        return nil
+    end
+    
     local Thrd_join = fcall(libc_addrofs.Thrd_join)
 
     -- will block until thread terminate
@@ -100,6 +107,11 @@ end
 --    client_fd = output sink fd for new thread
 --    close_socket_after_finished = if thread should close client_fd after it has finished running
 -- }
+--
+-- NOTE: Running lua in new thread using this method has a chance to crash the game process
+--       because of unfixed race condition in native primitives. Thus, calling this function
+--       is not recommended. Leaving the code here for historical purpose.
+--
 function run_lua_code_in_new_thread(lua_code, opt)
 
     opt = opt or {}
