@@ -142,8 +142,39 @@ function remote_lua_loader(port)
 
         client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()  
         
-        if client_fd < 0 then
-            error("accept() error: " .. get_error_string())
+        -- need to reinit the socket after rest mode
+        while client_fd < 0 do
+            print("accept() error: " .. get_error_string())
+            
+            syscall.close(sock_fd)
+            
+            sock_fd = syscall.socket(AF_INET, SOCK_STREAM, 0):tonumber()
+            if sock_fd < 0 then
+                error("socket() error: " .. get_error_string())
+            end
+
+            memory.write_dword(enable, 1)
+            if syscall.setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, enable, 4):tonumber() < 0 then
+                error("setsockopt() error: " .. get_error_string())
+            end
+
+            memory.write_byte(sockaddr_in + 1, AF_INET)
+            memory.write_word(sockaddr_in + 2, htons(port))
+            memory.write_dword(sockaddr_in + 4, INADDR_ANY)
+
+            if syscall.bind(sock_fd, sockaddr_in, 16):tonumber() < 0 then
+                error("bind() error: " .. get_error_string())
+            end
+         
+            if syscall.listen(sock_fd, 3):tonumber() < 0 then
+                error("listen() error: " .. get_error_string())
+            end
+            
+            print("[+] waiting for new connection...")
+            
+            memory.write_dword(addrlen, 16)
+
+            client_fd = syscall.accept(sock_fd, sockaddr_in, addrlen):tonumber()  
         end
  
         syscall.read(client_fd, tmp, 8)
