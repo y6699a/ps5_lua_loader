@@ -1,5 +1,5 @@
 
--- credit to shadPS4 project for references
+-- credit to flatz and shadPS4 project for references
 
 -- gpu page table
 
