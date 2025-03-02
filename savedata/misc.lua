@@ -160,34 +160,6 @@ function get_error_string()
     return errno:tonumber() .. " " .. memory.read_null_terminated_string(strerror(errno))
 end
 
-function get_module_name(addr)
-    local sceKernelGetModuleInfoFromAddr = fcall(libc_addrofs.sceKernelGetModuleInfoFromAddr)
-    local buf = memory.alloc(0x100)
-    if sceKernelGetModuleInfoFromAddr(addr, 1, buf):tonumber() ~= 0 then
-        return nil
-    end
-    return memory.read_null_terminated_string(buf+8)
-end
-
-function resolve_mod_base(initial_addr, modname, max_page_search)
-
-    max_page_search = max_page_search or 5
-
-    local initial_page = bit64.band(initial_addr, bit64.bnot(0xfff))
-    local page_size = 0x1000
-
-    for i=0, max_page_search-1 do
-        local base = initial_page - i*page_size
-        local cur_modname = get_module_name(base)
-        local prev_modname = get_module_name(base - page_size)
-        if cur_modname == modname and prev_modname ~= modname then
-            return base
-        end
-    end
-
-    errorf("failed to resolve %s base", modname)
-end
-
 function sysctlbyname(name, oldp, oldp_len, newp, newp_len)
     
     local translate_name_mib = memory.alloc(0x8)

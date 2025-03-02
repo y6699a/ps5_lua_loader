@@ -9,11 +9,11 @@ syscall = {}
 
 function syscall.init()
 
-    local addr_inside_libkernel = memory.read_qword(libc_addrofs.gettimeofday_import)
-    
-    libkernel_base = resolve_mod_base(addr_inside_libkernel, "libkernel.sprx")
+    syscall.collect_info()
+
     print("[+] libkernel base @ " .. hex(libkernel_base))
-    
+    print("[+] platform @ " .. PLATFORM)
+
     if PLATFORM == "ps4" then  -- ps4 requires valid syscall wrapper, which we can scrape from libkernel .text
         local libkernel_text = memory.read_buffer(libkernel_base, 0x40000)
         -- mov rax, <num>; mov r10, rcx; syscall
@@ -31,6 +31,37 @@ function syscall.init()
     end
 
     syscall.do_sanity_check()
+end
+
+function syscall.collect_info()
+
+    -- ref: https://github.com/shadps4-emu/shadPS4/blob/0bdd21b4e49c25955b16a3651255381b4a60f538/src/core/module.h#L32
+    local INIT_PROC_ADDR_OFFSET = 0x128
+    local SEGMENTS_OFFSET = 0x160
+    
+    local sceKernelGetModuleInfoFromAddr = fcall(libc_addrofs.sceKernelGetModuleInfoFromAddr)
+    
+    local addr_inside_libkernel = memory.read_qword(libc_addrofs.gettimeofday_import)
+    local mod_info = memory.alloc(0x300)
+
+    local ret = sceKernelGetModuleInfoFromAddr(addr_inside_libkernel, 1, mod_info):tonumber()
+    if ret ~= 0 then
+        error("sceKernelGetModuleInfoFromAddr() error: " .. hex(ret))
+    end
+    
+    libkernel_base = memory.read_qword(mod_info + SEGMENTS_OFFSET)
+
+    -- credit to flatz for this technique
+    local init_proc_addr = memory.read_qword(mod_info + INIT_PROC_ADDR_OFFSET)
+    local delta = (init_proc_addr - libkernel_base):tonumber()
+    
+    if delta == 0x0 then
+        PLATFORM = "ps4"
+    elseif delta == 0x10 then
+        PLATFORM = "ps5"
+    else
+        error("failed to determine PLATFORM")
+    end
 end
 
 function syscall.resolve(list)

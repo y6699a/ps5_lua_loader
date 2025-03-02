@@ -1,7 +1,4 @@
 
-PLATFORM = "ps4"  -- ps4 or ps5
-FW_VERSION = nil
-
 options = {
     enable_signal_handler = true,
     run_loader_with_gc_disabled = false,
