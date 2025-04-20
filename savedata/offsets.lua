@@ -7,7 +7,7 @@ games_identification = {
     [0x5d0] = "AikagiKimiIsshoniPack",
     [0x280] = "C",
     [0x600] = "E",
-    [0xd80] = "F",
+    [0xd80] = "IxSHETell",
 }
 
 gadget_table = {
@@ -616,7 +616,7 @@ gadget_table = {
             Atomic_fetch_add_8 = 0xe0c0,
         }
     },
-    f = {
+    ixshe_tell = {
         gadgets = {    
             ["ret"] = 0x4c,
             
@@ -683,7 +683,7 @@ gadget_table = {
         },
         libc_addrofs = {
             calloc = 0x57e00,
-            memcpy = 0x4df0,
+            memcpy = 0x4df50,
             setjmp = 0xb5630,
             longjmp = 0xb5680,
             strerror = 0x42540,
