@@ -88,7 +88,7 @@ offsets = {
             gmtime = 0x96D0,
             gmtime_s = 0x1640
         },
-        f = {
+        ixshe_tell = {
             time = 0xB4F00,
             gmtime = 0x3DA60,
             gmtime_s = 0x34790
@@ -105,7 +105,7 @@ function get_offsets(gamename)
     if gamename == "AikagiKimiIsshoniPack" then add_offsets = offsets.libc.aikagi_kimi_isshoni_pack end
     if gamename == "C" then add_offsets = offsets.libc.c end
     if gamename == "E" then add_offsets = offsets.libc.e end
-    if gamename == "F" then add_offsets = offsets.libc.f end
+    if gamename == "IxSHETell" then add_offsets = offsets.libc.ixshe_tell end
 end
 
 function time(tloc)
