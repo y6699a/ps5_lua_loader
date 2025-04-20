@@ -185,11 +185,11 @@ function lua.resolve_game(luaB_auxwrap)
         eboot_addrofs = gadget_table.e.eboot_addrofs
         libc_addrofs = gadget_table.e.libc_addrofs
         gadgets = gadget_table.e.gadgets
-    elseif game_name == "F" then -- TODO: Test
-        print("[+] Game identified as F")
-        eboot_addrofs = gadget_table.f.eboot_addrofs
-        libc_addrofs = gadget_table.f.libc_addrofs
-        gadgets = gadget_table.f.gadgets
+    elseif game_name == "IxSHETell" then
+        print("[+] Game identified as IxSHE Tell")
+        eboot_addrofs = gadget_table.ixshe_tell.eboot_addrofs
+        libc_addrofs = gadget_table.ixshe_tell.libc_addrofs
+        gadgets = gadget_table.ixshe_tell.gadgets
     end
 end
 
