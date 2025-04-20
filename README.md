@@ -11,6 +11,7 @@ Currently this loader is specific for the following list of games:
 4. Hamidashi Creative Demo (CUSA27390) - Requires latest firmware to download from PSN
 5. Aikagi Kimi to Issho ni Pack (CUSA16229)
 6. Aikagi 2 (CUSA19556)
+7. IxSHE Tell (CUSA17112)
 
 For guide on how to setup this loader, please refer [SETUP.md](SETUP.md)
 
