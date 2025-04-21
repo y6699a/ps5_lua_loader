@@ -12,6 +12,8 @@ Currently this loader is specific for the following list of games:
 5. Aikagi Kimi to Issho ni Pack (CUSA16229)
 6. Aikagi 2 (CUSA19556)
 7. IxSHE Tell (CUSA17112)
+8. Nora Princess and Stray Cat Heart HD (CUSA13303) - Requires manual loading of savegame
+   - Rename save9999.dat into nora_01.dat.
 
 For guide on how to setup this loader, please refer [SETUP.md](SETUP.md)
 
