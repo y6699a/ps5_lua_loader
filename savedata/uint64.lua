@@ -156,8 +156,15 @@ function uint64:divmod(v)
     return q, r
 end
 
-function uint64:__div(v) return select(1, self:divmod(v)) end
-function uint64:__mod(v) return select(2, self:divmod(v)) end
+function uint64:__div(v)
+    local q, _ = self:divmod(v)
+    return q
+end
+
+function uint64:__mod(v)
+    local _, r = self:divmod(v)
+    return r
+end
 
 
 --

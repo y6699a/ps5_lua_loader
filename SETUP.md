@@ -6,6 +6,7 @@
 3. Copy and paste all files from savedata into USB drive (x:\PS4\APOLLO\id_{YOUR_GAME_CUSA_ID}_savedata), overwriting currently existing save data
 4. Use Apollo Save Tool to import the new save data from USB drive
 5. Run the game and check if there is a popup from lua loader
+   - Some games require manual loading of save game, e.g. CUSA13303.
 6. Use `send_lua.py` to send lua file to the loader
 
 If you have a jailbroken PS5 with a non activated account, you can use [OffAct](https://github.com/ps5-payload-dev/websrv/releases) to offline activate the account and transfer save data with matching account ID using FTP.
@@ -36,4 +37,5 @@ If you have a jailbroken PS5 with a non activated account, you can use [OffAct](
 13. Connect your USB drive to the PS5/PS5 Slim/PS5 Pro.
 14. Use the PS5 settings menu to import the encrypted save data from the USB drive. (`Saved Data and Game/App Settings -> Saved Data (PS4) -> Copy or Delete from USB Drive -> Select your game and import`)
 15. Run the game and check if there is a popup from lua loader.
+    - Some games require manual loading of save game, e.g. CUSA13303.
 16. Use `send_lua.py` to send lua file to the loader.
