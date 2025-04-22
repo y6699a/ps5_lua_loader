@@ -1098,13 +1098,11 @@ function get_kprim_curthr_from_kstack()
     -- Find address with most occurance
     local curthr_count, curthr_addr = 0
 
-    local dict = {}
     for k, v in pairs(kernel_ptrs) do
         if v > curthr_count and uint64(k) < uint64(0xffffffffffffffff) then
             curthr_count = v
             curthr_addr = k
         end
-        table.insert(dict, {key = k, val = v})
     end
 
     if curthr_count < 5 then
