@@ -1099,7 +1099,7 @@ function get_kprim_curthr_from_kstack()
     local curthr_count, curthr_addr = 0
 
     for k, v in pairs(kernel_ptrs) do
-        if v > curthr_count and uint64(k) < uint64(0xffffffffffffffff) then
+        if v > curthr_count and uint64(k) < uint64("0xffffffffffffffff") then
             curthr_count = v
             curthr_addr = k
         end
