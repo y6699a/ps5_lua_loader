@@ -1095,19 +1095,23 @@ function get_kprim_curthr_from_kstack()
         end
     end
 
+    -- Find address with most occurance
+    local curthr_count, curthr_addr = 0
+
     local dict = {}
     for k, v in pairs(kernel_ptrs) do
+        if v > curthr_count and uint64(k) < uint64(0xffffffffffffffff) then
+            curthr_count = v
+            curthr_addr = k
+        end
         table.insert(dict, {key = k, val = v})
     end
 
-    -- sort by most occurences
-    table.sort(dict, function(a, b)
-        return a.val > b.val
-    end)
+    if curthr_count < 5 then
+        error("failed to find curthr_addr")
+    end
 
-    -- get kernel address in kstack with most occurences
-    local curthr_addr = uint64(select(2, next(dict)).key)
-    return curthr_addr
+    return uint64(curthr_addr)
 end
 
 
