@@ -417,14 +417,8 @@ function ftp_send_list()
         return
     end
 
-    local contents = memory.alloc(512)
-    if sceGetdents(fd, contents, 512) < 0 then
-        sceClose(fd)
-        ftp_send_ctrl_msg(string.format("550 Invalid directory. Got %s\r\n", ftp.client.cur_path))
-        return
-    end
-
-    local months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+    local contents = memory.alloc(4096)  -- bigger buffer, good
+    local months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
 
     ftp_send_ctrl_msg("150 Opening ASCII mode data transfer for LIST.\r\n")
     ftp_open_data_conn()
@@ -432,40 +426,48 @@ function ftp_send_list()
     time(curtime)
     gmtime_s(curtime, curtm)
 
-    local entry = contents
     while true do
-        local length = read_u8(entry + 0x4)
-        if length == 0 then break end
-        local name = memory.read_buffer(entry + 0x8, 64)
-        if name ~= '.' and name ~= '..' and name ~= '\0' then
-            local full_path = ftp.client.cur_path .. "/" .. name
-            if sceStat(full_path, st) >= 0 then
-                local file_mode = read_u16(st + 8)
-                local file_size = memory.read_qword(st + 72):tonumber()
-                
-                local tm = memory.alloc(36)
-                gmtime_s(st + 56, tm)
-                local n_hour = memory.read_dword(tm + 8)
-                local n_mins = memory.read_dword(tm + 4)
-                local n_mday = memory.read_dword(tm + 12)
-                local n_mon = memory.read_dword(tm + 16)
-                
-                -- mon + 1 because arrays starts at index 1 in lua.
-                ftp_send_data_msg(string.format("%s 1 ps4 ps4 %d %s %d %02d:%02d %s\r\n", 
-                    list_args(file_mode), 
-                    file_size, 
-                    months[n_mon:tonumber()+1], 
-                    n_mday:tonumber(), 
-                    n_hour:tonumber(), 
-                    n_mins:tonumber(), 
-                    name))
-            end
-        end
-        
-        entry = entry + length
-    end
-    sceClose(fd)
+        local nread = sceGetdents(fd, contents, 4096)
+        if nread <= 0 then break end
 
+        local entry = contents
+        local end_ptr = contents + nread
+
+        while entry < end_ptr do
+            local length = read_u8(entry + 0x4)
+            if length == 0 then break end
+
+            local name = memory.read_buffer(entry + 0x8, 64)
+
+            if name ~= '.' and name ~= '..' and name ~= '\0' then
+                local full_path = ftp.client.cur_path .. "/" .. name
+                if sceStat(full_path, st) >= 0 then
+                    local file_mode = read_u16(st + 8)
+                    local file_size = memory.read_qword(st + 72):tonumber()
+
+                    local tm = memory.alloc(36)
+                    gmtime_s(st + 56, tm)
+                    local n_hour = memory.read_dword(tm + 8)
+                    local n_mins = memory.read_dword(tm + 4)
+                    local n_mday = memory.read_dword(tm + 12)
+                    local n_mon = memory.read_dword(tm + 16)
+
+                    ftp_send_data_msg(string.format("%s 1 ps4 ps4 %d %s %d %02d:%02d %s\r\n",
+                        list_args(file_mode),
+                        file_size,
+                        months[n_mon:tonumber()+1],
+                        n_mday:tonumber(),
+                        n_hour:tonumber(),
+                        n_mins:tonumber(),
+                        name))
+                end
+            end
+
+            entry = entry + length
+        end
+    end
+
+    sceClose(fd)
     ftp_close_data_conn()
     ftp_send_ctrl_msg("226 Transfer complete\r\n")
 end
