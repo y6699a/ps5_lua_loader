@@ -316,15 +316,12 @@ function main()
 
     thread.init()
 
-    send_ps_notification(string.format("PS5 Lua Autoloader v0.1a \n %s %s", PLATFORM, FW_VERSION))
+    send_ps_notification(string.format("PS5 Lua Autoloader v0.2 \n %s %s", PLATFORM, FW_VERSION))
 
     local run_loader = function()
         local port = 9026
         remote_lua_loader(port)
     end
-
-    local lua_umtx = file_read("/savedata0/umtx.lua", "r")
-    local lua_elf_loader = file_read("/savedata0/elf_loader.lua", "r")
 
     if options.autoload then
         if PLATFORM ~= "ps5" or tonumber(FW_VERSION) < 2 or tonumber(FW_VERSION) > 7.61 then
@@ -332,10 +329,11 @@ function main()
             return
         end
 
+        local lua_umtx = file_read("/savedata0/umtx.lua", "r")
+        local lua_elf_loader = file_read("/savedata0/elf_loader.lua", "r")
+
         send_ps_notification("Loading UMTX")
         run_lua_code(lua_umtx, true)
-    
-        send_ps_notification("Loading ELF")
         run_lua_code(lua_elf_loader, true)
     
         notify("Done")

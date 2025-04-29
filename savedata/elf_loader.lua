@@ -224,7 +224,6 @@ end
 
 
 function main()
-
     check_jailbroken()
 
     syscall.resolve({
@@ -234,18 +233,32 @@ function main()
     })
 
     run_with_ps5_syscall_enabled(function()
-        local elfldr_data_path = "/data/" .. options.elf_filename
-        local elfldr_savedata_path = string.format("/mnt/sandbox/%s_000/savedata0/%s", get_title_id(), options.elf_filename)
+        local elf_filename = options.elf_filename
 
-        local existing_path = ""
-        if file_exists(elfldr_data_path) then
-            existing_path = elfldr_data_path
-        elseif file_exists(elfldr_savedata_path) then
-            existing_path = elfldr_savedata_path
-        else
-            errorf("file not exist: %s", existing_path)
+        -- Build possible paths, prioritizing USBs first, then /data, then savedata
+        local possible_paths = {}
+        for i = 0, 7 do
+            table.insert(possible_paths, string.format("/mnt/usb%d/%s", i, elf_filename))
         end
-        printf("loading %s from: %s", options.elf_filename, existing_path)
+        table.insert(possible_paths, "/data/" .. elf_filename)
+        table.insert(possible_paths, string.format("/mnt/sandbox/%s_000/savedata0/%s", get_title_id(), elf_filename))
+
+        send_ps_notification("Searching for: " .. elf_filename .. "\n in /data or USB drive")
+        local existing_path = nil
+        for _, path in ipairs(possible_paths) do
+            if file_exists(path) then
+                existing_path = path
+                break
+            end
+        end
+
+        if not existing_path then
+            send_ps_notification("Error: " .. elf_filename .. " not found in any known location\nPlease place it in /data or in root of USB drive")
+            errorf("file not exist in any known location")
+        end
+
+        send_ps_notification("Loading ELF: \n" .. existing_path)
+        printf("loading %s from: %s", elf_filename, existing_path)
 
         local elf = elf_loader:load_from_file(existing_path)
         elf:run()
