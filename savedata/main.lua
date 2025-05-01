@@ -126,7 +126,7 @@ function main()
 
     thread.init()
 
-    send_ps_notification(string.format("PS5 Lua Loader v0.3 \n %s %s", PLATFORM, FW_VERSION))
+    send_ps_notification(string.format("PS5 Lua Loader v0.4 \n %s %s", PLATFORM, FW_VERSION))
 
     if PLATFORM ~= "ps5" or tonumber(FW_VERSION) < 2 or tonumber(FW_VERSION) > 7.61 then
         notify(string.format("this only works on ps5 (2.00 <= fw <= 7.61) (current %s %s)", PLATFORM, FW_VERSION))

@@ -18,9 +18,6 @@ Supports PS5 firmware up to 7.61.
    
 The loader will find and load your payloads automatically.
 
-**Note:**  
-The current ELF loader implementation requires an active network connection (local network is sufficient).
-
 ---
 
 Currently this loader is specific for the following list of games:
