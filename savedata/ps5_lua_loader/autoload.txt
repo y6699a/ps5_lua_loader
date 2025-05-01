@@ -1,0 +1,19 @@
+#
+# ELF autoload config file
+# -------------------------
+#
+# Loader looks for this config file (ps5_lua_loader/autoload.txt) in this priority order:
+# - USB drives,
+# - /data directory,
+# - lua game savedata directory.
+#
+# This file should contain the names of ELF payloads that need to be sent.
+# (one ELF file name per line)
+# Lines starting with ! will be treated as sleep commands (e.g., !1000 will sleep for 1000ms).
+#
+# Don't include elf_loader payload here!
+#
+
+
+# john-tornblom's ftp server v0.11.3
+ftpsrv.elf
