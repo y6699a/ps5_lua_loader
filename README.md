@@ -3,11 +3,20 @@
 
 Fork of [remote_lua_loader](https://github.com/shahrilnet/remote_lua_loader)
 
-Instead of starting remote loader, it automatically loads UMTX and ELF Loader  
-*(Support for loading other ELF payloads coming soon)*
+Automatically loads UMTX, ELF Loader, and your ELF payloads.
+Supports PS5 firmware up to 7.61.
 
-
-Supports PS5 firmware 7.61 and below
+## How to Use
+* Create a directory named `ps5_lua_loader`.
+* Inside this directory, place your ELF payload files and an `autoload.txt` file.
+    * In `autoload.txt`, list the ELF filenames you want to load (one per line).
+    * You can add lines like `!1000` to make the loader wait 1000ms before sending the next payload.
+* Put the ps5_lua_loader directory in one of these locations:
+    * In the root of a USB drive
+    * In the internal drive at /data/ps5_lua_loader
+    * In the game’s savedata folder
+   
+The loader will find and load your payloads automatically.
 
 ---
 
