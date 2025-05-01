@@ -1,10 +1,13 @@
 
 -- rudimentary elf loader
+-- only expected to load john tornblom's elfldr.elf
+
 -- credit to nullptr for porting and specter for the original code
 
 
+
 options = {
-    elf_filename = "payload.elf",
+    elf_filename = "elfldr.elf",
 }
 
 
@@ -243,7 +246,6 @@ function main()
         table.insert(possible_paths, "/data/" .. elf_filename)
         table.insert(possible_paths, string.format("/mnt/sandbox/%s_000/savedata0/%s", get_title_id(), elf_filename))
 
-        send_ps_notification("Searching for: " .. elf_filename .. "\n in /data or USB drive")
         local existing_path = nil
         for _, path in ipairs(possible_paths) do
             if file_exists(path) then
