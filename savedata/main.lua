@@ -3,6 +3,7 @@ options = {
     enable_signal_handler = true,
     run_loader_with_gc_disabled = false,
     autoload = true,
+    sleep_after_starting_elf_loader = 3000 -- [ms] - wait before sending ELFs to loader
 }
 
 WRITABLE_PATH = "/av_contents/content_tmp/"
@@ -316,7 +317,7 @@ function main()
 
     thread.init()
 
-    send_ps_notification(string.format("PS5 Lua Autoloader v0.2 \n %s %s", PLATFORM, FW_VERSION))
+    send_ps_notification(string.format("PS5 Lua Autoloader v0.3 \n %s %s", PLATFORM, FW_VERSION))
 
     local run_loader = function()
         local port = 9026
@@ -331,11 +332,15 @@ function main()
 
         local lua_umtx = file_read("/savedata0/umtx.lua", "r")
         local lua_elf_loader = file_read("/savedata0/elf_loader.lua", "r")
+        local lua_elf_sender = file_read("/savedata0/elf_sender.lua", "r")
 
-        send_ps_notification("Loading UMTX")
         run_lua_code(lua_umtx, true)
         run_lua_code(lua_elf_loader, true)
-    
+
+        sleep(options.sleep_after_starting_elf_loader, "ms")
+
+        run_lua_code(lua_elf_sender, true)
+
         notify("Done")
     else
         if options.run_loader_with_gc_disabled then
@@ -344,8 +349,6 @@ function main()
             run_loader() -- less stable but doesnt exhaust memory
         end
     end
-
-
 
 
     sleep(10000000)
