@@ -1,30 +1,21 @@
+محمل PS5 Lua
+شوكة remote_lua_loader
 
-## PS5 Lua Loader
+يُحمّل تلقائيًا UMTX وELF Loader وحمولات ELF الخاصة بك. يدعم برامج PS5 الثابتة حتى الإصدار 7.61.
 
-Fork of [remote_lua_loader](https://github.com/shahrilnet/remote_lua_loader)
-
-Automatically loads UMTX, ELF Loader, and your ELF payloads.
-Supports PS5 firmware up to 7.61.
-
-## How to use
-* Create a directory named `ps5_lua_loader`.
-* Inside this directory, place your ELF payloads and an `autoload.txt` file.
-    * In `autoload.txt`, list the ELF filenames you want to load (one per line).  
-      Filenames are case-sensitive - make sure the names exactly match your ELF files.
-    * You can add lines like `!1000` to make the loader wait 1000ms before sending the next payload.
-* Put the `ps5_lua_loader` directory in one of these locations:
-    * In the root of a USB drive
-    * In the internal drive at `/data/ps5_lua_loader`
-    * In the game’s savedata folder
-* Import savedata to your game:  
-  Follow the steps in [SETUP.md](SETUP.md) to prepare and import the savedata for your Lua-compatible game.
-   
-
-## Game Compatibility
-
-Currently this loader is compatible with the following games:
-  
-| Game Title                            | CUSA ID     | Notes                                                                           |
+كيفية الاستخدام
+إنشاء دليل باسم ps5_lua_loader.
+داخل هذا الدليل، ضع حمولات ELF الخاصة بك وملفًا autoload.txt.
+في autoload.txt، أدرج أسماء ملفات ELF التي تريد تحميلها (اسم واحد لكل سطر).
+أسماء الملفات حساسة لحالة الأحرف، لذا تأكد من تطابقها تمامًا مع ملفات ELF.
+يمكنك إضافة أسطر مثل !1000جعل المحمل ينتظر 1000 مللي ثانية قبل إرسال الحمولة التالية.
+ضع ps5_lua_loaderالدليل في أحد هذه المواقع:
+في جذر محرك أقراص USB
+في محرك الأقراص الداخلي في/data/ps5_lua_loader
+في مجلد البيانات المحفوظة للعبة
+استيراد البيانات المحفوظة إلى لعبتك:
+اتبع الخطوات الموجودة في SETUP.md لإعداد واستيراد البيانات المحفوظة للعبة المتوافقة مع Lua.
+| توافق اللعبة                            | CUSA ID     | Notes                                                                           |
 |---------------------------------------|-------------|---------------------------------------------------------------------------------|
 | Raspberry Cube                        | CUSA16074   |                                                                                 |
 | Aibeya                                | CUSA17068   |                                                                                 |
